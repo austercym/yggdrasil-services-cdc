@@ -1,0 +1,366 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.orwellg</groupId>
+	<artifactId>yggdrasil-party-create</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>yggdrasil-party-create</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<casandra.version>3.3.0</casandra.version>
+		<umbrella.version>0.0.1</umbrella.version>
+		<yggdrasil.version>0.0.1</yggdrasil.version>
+		<storm.version>1.1.0</storm.version>
+		<kafka.clients.version>0.11.0.0</kafka.clients.version>
+		<commons.lang3.version>3.5</commons.lang3.version>
+		<gson.google.version>2.8.1</gson.google.version>
+		<archaius.version>0.7.5</archaius.version>
+		<org.apache.codec.version>1.10</org.apache.codec.version>
+
+		<junit.version>4.12</junit.version>
+		<commons.io.version>2.5</commons.io.version>
+
+		<storm.topology>com.orwellg.yggdrasil.party.create.topology.PartyCreateTopology</storm.topology>
+	</properties>
+
+	<dependencies>
+		<!-- UMBRELLA COMMONS dependencies -->
+		<dependency>
+			<groupId>com.orwellg.umbrella</groupId>
+			<artifactId>umbrella-commons</artifactId>
+			<version>${umbrella.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.orwellg.umbrella</groupId>
+			<artifactId>umbrella-commons-types</artifactId>
+			<version>${umbrella.version}</version>
+		</dependency>
+
+		<!-- UMBRELLA STORM dependencies -->
+		<dependency>
+			<groupId>com.orwellg.umbrella</groupId>
+			<artifactId>umbrella-commons-storm</artifactId>
+			<version>${umbrella.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>log4j-over-slf4j</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- YGGDRASIL COMMONS dependencies -->
+		<dependency>
+			<groupId>com.orwellg.yggdrasil</groupId>
+			<artifactId>yggdrasil-commons</artifactId>
+			<version>${yggdrasil.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.storm</groupId>
+			<artifactId>storm-core</artifactId>
+			<version>${storm.version}</version>
+			<scope>provided</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.apache.logging.log4j</groupId>
+					<artifactId>log4j-slf4j-impl</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>log4j-over-slf4j</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.storm</groupId>
+			<artifactId>storm-kafka-client</artifactId>
+			<version>${storm.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-clients</artifactId>
+			<version>${kafka.clients.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>${org.apache.codec.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${commons.lang3.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>${gson.google.version}</version>
+		</dependency>
+		<!-- Read and write CSV files -->
+		<dependency>
+		    <groupId>org.apache.commons</groupId>
+		    <artifactId>commons-csv</artifactId>
+		    <version>1.5</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- TODO Launch "maria" db server in tests -->
+		<!-- Used by some UniqueIDGenerator tests -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons.io.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Launch docker as @Rule in integration tests -->
+		<dependency>
+			<groupId>com.palantir.docker.compose</groupId>
+			<artifactId>docker-compose-rule-junit4</artifactId>
+			<version>0.32.0</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Launch zookeeper server in tests -->
+		<dependency>
+		    <groupId>org.dmonix.junit</groupId>
+		    <artifactId>zookeeper-junit</artifactId>
+		    <version>1.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>com.palantir</id>
+			<url>https://dl.bintray.com/palantir/releases</url>
+		</repository>
+	</repositories>
+
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>3.1.0</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>com.orwellg.onboarding.party.topology.PartyTopology</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id> <!-- this is used for inheritance merges -->
+						<phase>package</phase> <!-- bind to the packaging phase -->
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.2.1</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<executable>java</executable>
+					<includeProjectDependencies>true</includeProjectDependencies>
+					<includePluginDependencies>false</includePluginDependencies>
+					<classpathScope>compile</classpathScope>
+					<mainClass>${storm.topology}</mainClass>
+				</configuration>
+			</plugin>
+			<!-- Enabling and configuring regular resources filtering. See also section
+				"resources" below -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<!-- specify UTF-8, ISO-8859-1 or any other file encoding -->
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<!-- Enable multiple src and resources directories -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.9.1</version>
+				<executions>
+					<!-- Add a new source directory to our build -->
+					<execution>
+						<id>add-integration-test-sources</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>add-test-source</goal>
+						</goals>
+						<configuration>
+							<!-- Configures the source directory of our integration tests -->
+							<sources>
+								<source>src/integration-test/java</source>
+							</sources>
+						</configuration>
+					</execution>
+					<!-- Add a new resource directory to our build -->
+					<execution>
+						<id>add-integration-test-resources</id>
+						<phase>generate-test-resources</phase>
+						<goals>
+							<goal>add-test-resource</goal>
+						</goals>
+						<configuration>
+							<!-- Configures the resource directory of our integration tests -->
+							<resources>
+								<!-- Placeholders that are found from the files located in the configured
+									resource directories are replaced with the property values found from the
+									profile specific configuration file. -->
+								<resource>
+									<filtering>true</filtering>
+									<directory>src/integration-test/resources</directory>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- Runs unit tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.18</version>
+				<configuration>
+					<!-- Skips unit tests if the value of skip.unit.tests property is true -->
+					<skipTests>${skip.unit.tests}</skipTests>
+					<!-- Excludes integration tests when unit tests are run -->
+					<excludes>
+						<exclude>**/*IT.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<!-- Runs integration tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.18</version>
+				<executions>
+					<!-- Invokes both the integration-test and the verify goals of the Failsafe
+						Maven plugin -->
+					<execution>
+						<id>integration-tests</id>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+						<configuration>
+							<!-- Skips integration tests if the value of skip.integration.tests
+								property is true -->
+							<skipTests>${skip.integration.tests}</skipTests>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+
+		<!-- Instructing the resources plugin to filter certain directories -->
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+			</resource>
+		</resources>
+	</build>
+
+	<profiles>
+		<!-- Development environment @ my laptop -->
+		<profile>
+			<id>dev</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<zookeeper.host>localhost:2181</zookeeper.host>
+				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host"
+					property: <kafka.bootstrap.host>localhost:9092,localhost:10092</kafka.bootstrap.host> -->
+				<!-- Specifies the build.profile.id property that must be equal than
+					the name of the directory that contains the profile specific configuration
+					file. Because the name of the directory that contains the configuration file
+					of the development profile is dev, we must set the value of the build.profile.id
+					property to dev. -->
+				<build.profile.id>dev</build.profile.id>
+				<!-- Only unit tests are run when the development profile is active -->
+				<skip.integration.tests>true</skip.integration.tests>
+				<skip.unit.tests>false</skip.unit.tests>
+			</properties>
+		</profile>
+		<!-- The Configuration of the integration-test profile -->
+		<profile>
+			<id>integration-test</id>
+			<properties>
+				<zookeeper.host>localhost:2181</zookeeper.host>
+				<!-- Specifies the build.profile.id property that must be equal than
+					the name of the directory that contains the profile specific configuration
+					file. Because the name of the directory that contains the configuration file
+					of the integration-test profile is integration-test, we must set the value
+					of the build.profile.id property to integration-test. -->
+				<build.profile.id>integration-test</build.profile.id>
+				<!-- Only integration tests are run when the integration-test profile
+					is active -->
+				<skip.integration.tests>false</skip.integration.tests>
+				<skip.unit.tests>true</skip.unit.tests>
+			</properties>
+		</profile>
+		<!-- Integration environment @ OVH -->
+		<profile>
+			<id>integration</id>
+			<properties>
+				<zookeeper.host>hdf-node1:2181</zookeeper.host>
+				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host"
+					property: <kafka.bootstrap.host>hdf-node1:6667,hdf-node4:6667,hdf-node5:6667</kafka.bootstrap.host> -->
+				<skip.integration.tests>true</skip.integration.tests>
+				<skip.unit.tests>true</skip.unit.tests>
+			</properties>
+		</profile>
+	</profiles>
+</project>
