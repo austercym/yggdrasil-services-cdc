@@ -1,15 +1,24 @@
 package com.orwellg.yggdrasil.party.create.topology.bolts;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.when;
+
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.commons.config.MariaDBConfig;
+import com.orwellg.umbrella.commons.config.params.MariaDBParams;
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
@@ -19,27 +28,46 @@ import com.orwellg.yggdrasil.party.dao.PartyPersonalDetailsDAO;
 public class CreatePartyBoltTest {
 
 	// Local idgen not to need zookeeper connection
-	UniqueIDGeneratorLocal idGen = new UniqueIDGeneratorLocal();
-	CreatePartyBolt bolt = new CreatePartyBolt();
-	PartyDAO partyDao;
-	PartyPersonalDetailsDAO personalDetailsDao;
-	
-	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
-	}
+	protected UniqueIDGeneratorLocal idGen = new UniqueIDGeneratorLocal();
+	protected CreatePartyBolt bolt = new CreatePartyBolt();
+	protected static PartyDAO partyDao;
+	protected static PartyPersonalDetailsDAO personalDetailsDao;
 
-	@AfterClass
-	public static void tearDownAfterClass() throws Exception {
-	}
+	@Mock
+	protected TopologyConfig config;
+	
+	@Mock
+	protected MariaDBConfig mariaDbConfig;
+
+	@Mock
+	protected MariaDBParams mariaDbParams;
+	
+	@Rule
+	public MockitoRule mockitoRule = MockitoJUnit.rule();
 
 	@Before
-	public void setUp() throws Exception {
+	public void setUp() throws Throwable {
+		TopologyConfigFactory.setTopologyConfig(config);
+
+		when(config.getMariaDBConfig()).thenReturn(mariaDbConfig);
+		when(mariaDbConfig.getMariaDBParams()).thenReturn(mariaDbParams);
+		when(mariaDbParams.getHost()).thenReturn("localhost");
+		when(mariaDbParams.getPort()).thenReturn("3306");
+		when(mariaDbParams.getDbName()).thenReturn("ipagoo");
+		when(mariaDbParams.getUser()).thenReturn("ipagoo");
+		when(mariaDbParams.getPassword()).thenReturn("tempo.99");
+		
+		TopologyConfig c2 = TopologyConfigFactory.getTopologyConfig("topo.properties");
+		assertEquals(config, c2);
+		assertEquals("jdbc:mysql://localhost:3306/ipagoo", MariaDbManager.getInstance().getUrl());
+		
 		partyDao = new PartyDAO(MariaDbManager.getInstance().getConnection());
 		personalDetailsDao = new PartyPersonalDetailsDAO(MariaDbManager.getInstance().getConnection());
 	}
 
 	@After
-	public void tearDown() throws Exception {
+	public void tearDownAfterClass() throws Exception {
+		TopologyConfigFactory.resetTopologyConfig();
 	}
 
 	@Test
@@ -97,17 +125,11 @@ public class CreatePartyBoltTest {
 		Assert.assertEquals(detT.getEmploymentDetails(), resultDet.getEmploymentDetails());
 	}
 
-	@Test
-	public void testSaveNonPersonalParty() {
+//	@Test
+//	public void testSaveNonPersonalParty() {
 		// TODO Given Party with NonPersonalDetails
 		// When saveParty
 		// Then Party in db
 		// and NonPersonalDetails in db
-	}
-	
-//	@Test
-//	public void testExecute() {
-//		fail("Not yet implemented");
 //	}
-
 }

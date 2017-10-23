@@ -20,10 +20,10 @@ public class LdapConfig extends ZkConfigurationParams {
 	public static final String ZK_SUB_BRANCH_KEY = "zookeeper.ldap.config.subbranch";
 
 	// zookeeper property names where the configuration may be stored
-	public static final String URL_PROP_NAME = "yggdrassil.ldap.url";
-	public static final String ADMIN_DN_ZKPROP_NAME = "yggdrassil.ldap.admin.dn";
-	public static final String ADMIN_PWD_ZKPROP_NAME  = "yggdrassil.ldap.admin.pwd";
-	public static final String USERS_GROUP_DN_ZKPROP_NAME  = "yggdrassil.ldap.usersgroup.dn";
+	public static final String URL_PROP_NAME = "yggdrasil.ldap.url";
+	public static final String ADMIN_DN_ZKPROP_NAME = "yggdrasil.ldap.admin.dn";
+	public static final String ADMIN_PWD_ZKPROP_NAME  = "yggdrasil.ldap.admin.pwd";
+	public static final String USERS_GROUP_DN_ZKPROP_NAME  = "yggdrasil.ldap.usersgroup.dn";
 	
 	protected LdapParams ldapParams;
 

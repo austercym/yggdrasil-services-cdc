@@ -1,56 +1,60 @@
 package com.orwellg.yggdrasil.party.ldap;
 
+import static org.junit.Assert.assertEquals;
+
+import java.time.Duration;
+
 import javax.naming.directory.DirContext;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.yggdrasil.party.config.LdapParams;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWihLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 
-public class LdapUtilTest {
+import zookeeperjunit.ZKFactory;
+import zookeeperjunit.ZKInstance;
 
-	// This is java-uniqueid way to access zookeeper:
-//	@Rule
-//	public ZooKeeperInstance zkInstance = new ZooKeeperInstance();
+public class LdapUtilIT {
 
-	private final static Logger LOG = LogManager.getLogger(LdapUtilTest.class);
+	/**In-process zookeeper instance*/
+	private static final ZKInstance zkInstance = ZKFactory.apply()
+			 .withPort(6969)
+			 .create();	
 
-	/**
-	 * Launch local zookeeper instance in test, populate it, read it in test.
-	 * 
-	 * @throws Exception
-	 */
+	private final static Logger LOG = LogManager.getLogger(LdapUtilIT.class);
+
+	@BeforeClass
+	public static void setUpBeforeClass() throws Throwable {
+		// Starts a ZooKeeper server
+		zkInstance.start().result(Duration.ofSeconds(90));
+
+		TopologyConfigFactory.resetTopologyConfig();
+		
+		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
+		assertEquals(LdapParams.URL_DEFAULT, config.getLdapConfig().getLdapParams().getUrl());
+	}
+
+	@AfterClass
+	public static void tearDownAfterClass() throws Exception {
+        TopologyConfigFactory.resetTopologyConfig();
+
+        // Stops the ZooKeeper instance and also deletes any data files.
+		// This makes sure no state is kept between test cases.
+		zkInstance.destroy().ready(Duration.ofSeconds(90));
+	}
+
+	
 	@Test
 	public void testAddUserAndGetById() throws Exception {
-		// This is netflix (umbrella) way to access zookeeper:
-//		ZookeeperUtils.init("localhost:" + ZooKeeperInstance.DEFAULT_PORT, ConfigurationParams.ZK_PARTY_SEARCH_ROOT);
-//		SubscriberKafkaConfiguration subsConfig;
-//		subsConfig = SubscriberKafkaConfiguration.loadConfiguration(PartyTopology.SUBSCRIBER_LOCAL_YAML);
-//		if (!ConfigurationManager.isConfigurationInstalled()) {
-//			ZookeeperUtils.init(subsConfig.getZookeeper().getHost(), ConfigurationParams.ZK_PARTY_STORM_ROOT);
-//		}
-
-		// TODO maybe change this zookeeper from java-uniqueid way to netflix (umbrella) way to access to zookeeper:
-		// This is java-uniqueid way to access zookeeper:
-//		// Write parameter in zookeeper so that later it can be read by
-//		// ComponentFactory.getConfigurationParams() in LdapUtil:
-//		ZooKeeper zookeeper = zkInstance.getZookeeperConnection();
-//		ResourceTestPoolHelper.prepareZkParam(zookeeper, "/com/orwellg/party-storm/ldap.url",
-//				"ldap://ec2-35-176-201-54.eu-west-2.compute.amazonaws.com:389");
-		// Alternative:
-		// ZooKeeperHelper.mkdirp(zookeeper, znode);
-		// ZooKeeperHelper.create(zookeeper, znode + CLUSTER_ID_NODE,
-		// String.valueOf(DEFAULT_CLUSTER_ID).getBytes());
-
-		// This tries to connect to zookeeper and get
-		// "/com/orwellg/party-storm/ldap.url" property among others:
-		// Get (and init if they weren't before) party-storm application-wide params. Tries to connect to zookeeper:
-		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig();
+		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
 		// LdapUtil specific params
 		LdapParams ldapParams = config.getLdapConfig().getLdapParams();
 		LdapUtil ldapUtil = new LdapUtil(ldapParams);

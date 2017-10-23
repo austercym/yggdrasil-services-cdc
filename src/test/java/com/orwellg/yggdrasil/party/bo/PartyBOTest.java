@@ -1,36 +1,41 @@
 package com.orwellg.yggdrasil.party.bo;
 
+import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+import java.util.Scanner;
+
+import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.esotericsoftware.minlog.Log;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyNonPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
-import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 
 public class PartyBOTest {
 
-	MariaDbManager man;
-	PartyBO partyBO;
-
-	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
-	}
-
-	@AfterClass
-	public static void tearDownAfterClass() throws Exception {
-	}
+	protected static final String JDBC_CONN = "jdbc:h2:mem:test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+//	TODO private static final String DATABASE_SQL = "DataModel/MariaDB/mariadb_obs_datamodel.sql";
+	private static final String DATABASE_SQL = "party.sql";
+	private static final String DELIMITER = ";";
+	
+	protected PartyBO partyBO;
 
 	@Before
-	public void setUp() throws Exception {
-		man = MariaDbManager.getInstance("db-local.yaml");
-		partyBO = new PartyBO(man.getConnection());
+	public void setUp() throws Throwable {
+		Connection connection = DriverManager.getConnection(JDBC_CONN);
+		createDbSchema(connection, DATABASE_SQL);
+		Statement s = connection.createStatement();
+		s.executeQuery("SELECT * FROM `Party`;");
+		
+		partyBO = new PartyBO(connection);
 	}
 
 	@After
@@ -62,4 +67,28 @@ public class PartyBOTest {
 		Assert.assertEquals(nonPersDet, p.getParty().getNonPersonalDetails());
 	}
 
+	protected void createDbSchema(Connection con, String sqlFile) throws Exception {
+		Statement s = con.createStatement();
+		
+		File file = new File(getClass().getClassLoader().getResource(DATABASE_SQL).getFile());
+		
+		Scanner sc = new Scanner(file);
+
+		sc.useDelimiter(DELIMITER);
+
+		while (sc.hasNext()){
+
+			String line = sc.next();
+			if (StringUtils.isNotBlank(line)) {
+				try {
+					s.execute(line.toUpperCase());
+				} catch (Exception e) {
+					Log.warn(e.getMessage());
+				}
+			}
+		}
+
+		sc.close();
+
+	}
 }

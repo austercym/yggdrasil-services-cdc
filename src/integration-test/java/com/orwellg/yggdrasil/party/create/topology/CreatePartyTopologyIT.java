@@ -40,6 +40,8 @@ import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
+import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
+import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
 import com.orwellg.yggdrasil.party.bo.PartyBO;
 import com.orwellg.yggdrasil.party.config.LdapParams;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWihLdap;
@@ -69,14 +71,14 @@ public class CreatePartyTopologyIT {
 		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig();
 		CuratorFramework client = CuratorFrameworkFactory.newClient(config.getZookeeperConnection(), new ExponentialBackoffRetry(1000, 3));
 		client.start();
-		String path = "/com/orwellg/unique-id-generator/cluster-suffix";
-		if (null == client.checkExists().forPath(path)) {
-			LOG.info("Setting zookeeper property {} = {}", path, "IPAGO");
-			client.create().forPath(path, "IPAGO".getBytes());
-		} else {
-			LOG.info("Zookeeper property {} found = {}", path, new String(client.getData().forPath(path)));
-		}
 
+		ZooKeeperHelper zk = new ZooKeeperHelper(client);
+		
+		// #uniqueid must be set anyway in zookeeper:
+		// create /com/orwellg/unique-id-generator/cluster-suffix IPAGO
+		String uniqueIdClusterSuffix = "IPAGO";
+		zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
+		
 		MariaDbManager mariaDbManager = MariaDbManager.getInstance("db-local.yaml");
 		partyDAO = new PartyDAO(mariaDbManager.getConnection());
 		partyBO = new PartyBO(mariaDbManager.getConnection());
@@ -90,36 +92,26 @@ public class CreatePartyTopologyIT {
 	 */
 	@Test 
 	public void testSetUpAndExecPartyTopology() throws Exception {
-		// TODO move db.yaml to zookeeper
-
-		// String url, user, pwd;
-		// String DBMS = "mysql";
-		// String DB_SERVERNAME = "localhost";
-		// String DB_PORTNB = "3306";
-		// String DB_USER = "ipagoo";
-		// String DB_PWD = "tempo.99";
-		// url = "jdbc:" + DBMS + "://" + DB_SERVERNAME + ":" + DB_PORTNB + "/";
-		// user = DB_USER;
-		// pwd = DB_PWD;
-		// MariaDbManager.initInstance(url, user, pwd);
-
 		// Set for tests: zookeeper property /com/orwellg/unique-id-generator/cluster-suffix = IPAGO
 		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig();
 		CuratorFramework client = CuratorFrameworkFactory.newClient(config.getZookeeperConnection(), new ExponentialBackoffRetry(1000, 3));
 		client.start();
-		String path = "/com/orwellg/unique-id-generator/cluster-suffix";
-		if (null == client.checkExists().forPath(path)) {
-			LOG.info("Setting zookeeper property {} = {}", path, "IPAGO");
-			client.create().forPath(path, "IPAGO".getBytes());
-		}
-		//client.close();
+
+		// And zookeeper with params set
+		ZooKeeperHelper zk = new ZooKeeperHelper(client);
 		
-		// Load in local cluster with *-local.yaml property files
+		// #uniqueid must be set anyway in zookeeper:
+		// create /com/orwellg/unique-id-generator/cluster-suffix IPAGO
+		String uniqueIdClusterSuffix = "IPAGO";
+		zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
+		
+		// Load topology in local storm cluster
 		LOG.info("LocalCluster setting up...");
 		LocalCluster cluster = new LocalCluster();
 		LOG.info("...LocalCluster set up.");
 		CreatePartyTopology.loadTopologyInStorm(cluster);
 
+		// When request then get response and created element
 		requestCreatePartyToTopologyAndWaitResponse();
 
 		cluster.shutdown();

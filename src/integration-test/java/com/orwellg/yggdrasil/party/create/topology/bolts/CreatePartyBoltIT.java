@@ -1,45 +1,64 @@
 package com.orwellg.yggdrasil.party.create.topology.bolts;
 
-import org.junit.After;
+import static org.junit.Assert.assertEquals;
+
+import java.time.Duration;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
+import com.orwellg.yggdrasil.party.create.topology.bolts.CreatePartyBolt;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 import com.orwellg.yggdrasil.party.dao.PartyDAO;
 import com.orwellg.yggdrasil.party.dao.PartyPersonalDetailsDAO;
 
-public class PartyJoinCreateAndLdapBoltTest {
+import zookeeperjunit.ZKFactory;
+import zookeeperjunit.ZKInstance;
 
+public class CreatePartyBoltIT {
+
+	/**In-process zookeeper instance*/
+	private static final ZKInstance zkInstance = ZKFactory.apply()
+			 .withPort(6969)
+			 .create();	
+	
 	// Local idgen not to need zookeeper connection
-	UniqueIDGeneratorLocal idGen = new UniqueIDGeneratorLocal();
-	CreatePartyBolt bolt = new CreatePartyBolt();
-	PartyDAO partyDao;
-	PartyPersonalDetailsDAO personalDetailsDao;
+	protected UniqueIDGeneratorLocal idGen = new UniqueIDGeneratorLocal();
+	protected CreatePartyBolt bolt = new CreatePartyBolt();
+	protected static PartyDAO partyDao;
+	protected static PartyPersonalDetailsDAO personalDetailsDao;
 	
 	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {
-	}
+	public static void setUpBeforeClass() throws Throwable {
+		// Starts a ZooKeeper server
+		zkInstance.start().result(Duration.ofSeconds(90));
 
-	@AfterClass
-	public static void tearDownAfterClass() throws Exception {
-	}
+		TopologyConfigFactory.resetTopologyConfig();
+		
+		TopologyConfig config = TopologyConfigFactory.getTopologyConfig("topo.properties");
+		assertEquals("localhost", config.getMariaDBConfig().getMariaDBParams().getHost());
+		assertEquals("3306", config.getMariaDBConfig().getMariaDBParams().getPort());
 
-	@Before
-	public void setUp() throws Exception {
 		partyDao = new PartyDAO(MariaDbManager.getInstance().getConnection());
 		personalDetailsDao = new PartyPersonalDetailsDAO(MariaDbManager.getInstance().getConnection());
 	}
 
-	@After
-	public void tearDown() throws Exception {
+	@AfterClass
+	public static void tearDownAfterClass() throws Exception {
+        TopologyConfigFactory.resetTopologyConfig();
+
+        // Stops the ZooKeeper instance and also deletes any data files.
+		// This makes sure no state is kept between test cases.
+		zkInstance.destroy().ready(Duration.ofSeconds(90));
 	}
 
 	@Test

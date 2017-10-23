@@ -13,12 +13,13 @@
 	<properties>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-		<casandra.version>3.3.0</casandra.version>
+		<mariadb.version>2.1.0</mariadb.version>
 		<umbrella.version>0.0.1</umbrella.version>
 		<yggdrasil.version>0.0.1</yggdrasil.version>
+		<log4j.version>2.9.1</log4j.version>
 		<storm.version>1.1.0</storm.version>
 		<kafka.clients.version>0.11.0.0</kafka.clients.version>
 		<commons.lang3.version>3.5</commons.lang3.version>
@@ -50,12 +51,6 @@
 			<groupId>com.orwellg.umbrella</groupId>
 			<artifactId>umbrella-commons-storm</artifactId>
 			<version>${umbrella.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>log4j-over-slf4j</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 
 		<!-- YGGDRASIL COMMONS dependencies -->
@@ -109,6 +104,36 @@
 			<artifactId>kafka-clients</artifactId>
 			<version>${kafka.clients.version}</version>
 		</dependency>
+
+		<!-- Relational MariaDB access -->
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>${mariadb.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-api</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>${log4j.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.8.0-beta0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>1.8.0-beta0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
@@ -126,9 +151,9 @@
 		</dependency>
 		<!-- Read and write CSV files -->
 		<dependency>
-		    <groupId>org.apache.commons</groupId>
-		    <artifactId>commons-csv</artifactId>
-		    <version>1.5</version>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.5</version>
 		</dependency>
 
 		<dependency>
@@ -154,10 +179,22 @@
 		</dependency>
 		<!-- Launch zookeeper server in tests -->
 		<dependency>
-		    <groupId>org.dmonix.junit</groupId>
-		    <artifactId>zookeeper-junit</artifactId>
-		    <version>1.2</version>
+			<groupId>org.dmonix.junit</groupId>
+			<artifactId>zookeeper-junit</artifactId>
+			<version>1.2</version>
 			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>1.4.196</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>2.11.0</version>
 		</dependency>
 	</dependencies>
 
@@ -212,7 +249,7 @@
 					<mainClass>${storm.topology}</mainClass>
 				</configuration>
 			</plugin>
-			<!-- Enabling and configuring regular resources filtering. See also section
+			<!-- Enabling and configuring regular resources filtering. See also section 
 				"resources" below -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -253,8 +290,8 @@
 						<configuration>
 							<!-- Configures the resource directory of our integration tests -->
 							<resources>
-								<!-- Placeholders that are found from the files located in the configured
-									resource directories are replaced with the property values found from the
+								<!-- Placeholders that are found from the files located in the configured 
+									resource directories are replaced with the property values found from the 
 									profile specific configuration file. -->
 								<resource>
 									<filtering>true</filtering>
@@ -285,7 +322,7 @@
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<version>2.18</version>
 				<executions>
-					<!-- Invokes both the integration-test and the verify goals of the Failsafe
+					<!-- Invokes both the integration-test and the verify goals of the Failsafe 
 						Maven plugin -->
 					<execution>
 						<id>integration-tests</id>
@@ -294,7 +331,7 @@
 							<goal>verify</goal>
 						</goals>
 						<configuration>
-							<!-- Skips integration tests if the value of skip.integration.tests
+							<!-- Skips integration tests if the value of skip.integration.tests 
 								property is true -->
 							<skipTests>${skip.integration.tests}</skipTests>
 						</configuration>
@@ -321,12 +358,12 @@
 			</activation>
 			<properties>
 				<zookeeper.host>localhost:2181</zookeeper.host>
-				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host"
+				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host" 
 					property: <kafka.bootstrap.host>localhost:9092,localhost:10092</kafka.bootstrap.host> -->
-				<!-- Specifies the build.profile.id property that must be equal than
-					the name of the directory that contains the profile specific configuration
-					file. Because the name of the directory that contains the configuration file
-					of the development profile is dev, we must set the value of the build.profile.id
+				<!-- Specifies the build.profile.id property that must be equal than 
+					the name of the directory that contains the profile specific configuration 
+					file. Because the name of the directory that contains the configuration file 
+					of the development profile is dev, we must set the value of the build.profile.id 
 					property to dev. -->
 				<build.profile.id>dev</build.profile.id>
 				<!-- Only unit tests are run when the development profile is active -->
@@ -339,13 +376,13 @@
 			<id>integration-test</id>
 			<properties>
 				<zookeeper.host>localhost:2181</zookeeper.host>
-				<!-- Specifies the build.profile.id property that must be equal than
-					the name of the directory that contains the profile specific configuration
-					file. Because the name of the directory that contains the configuration file
-					of the integration-test profile is integration-test, we must set the value
+				<!-- Specifies the build.profile.id property that must be equal than 
+					the name of the directory that contains the profile specific configuration 
+					file. Because the name of the directory that contains the configuration file 
+					of the integration-test profile is integration-test, we must set the value 
 					of the build.profile.id property to integration-test. -->
 				<build.profile.id>integration-test</build.profile.id>
-				<!-- Only integration tests are run when the integration-test profile
+				<!-- Only integration tests are run when the integration-test profile 
 					is active -->
 				<skip.integration.tests>false</skip.integration.tests>
 				<skip.unit.tests>true</skip.unit.tests>
@@ -356,7 +393,7 @@
 			<id>integration</id>
 			<properties>
 				<zookeeper.host>hdf-node1:2181</zookeeper.host>
-				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host"
+				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host" 
 					property: <kafka.bootstrap.host>hdf-node1:6667,hdf-node4:6667,hdf-node5:6667</kafka.bootstrap.host> -->
 				<skip.integration.tests>true</skip.integration.tests>
 				<skip.unit.tests>true</skip.unit.tests>
