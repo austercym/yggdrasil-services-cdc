@@ -45,9 +45,7 @@ public class LdapUtilIT {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-		TopologyConfigWithLdapFactory.getTopologyConfig().close();
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
-		TopologyConfigFactory.getTopologyConfig().close();
 		TopologyConfigFactory.resetTopologyConfig();
 
         // Stops the ZooKeeper instance and also deletes any data files.

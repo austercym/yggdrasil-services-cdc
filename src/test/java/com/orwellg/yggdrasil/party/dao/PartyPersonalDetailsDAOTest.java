@@ -11,6 +11,8 @@ import org.junit.Test;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
 import com.orwellg.yggdrasil.h2.H2DbHelper;
@@ -52,13 +54,15 @@ public class PartyPersonalDetailsDAOTest {
 		PartyPersonalDetailsType det = new PartyPersonalDetailsType();
 		det.setId(idGen.generateUniqueIDStr());
 		det.setPartyID(partyId);
-		det.setEmploymentDetails("emp det");
-		det.setCitizenships("cit");
-		det.setTaxResidency("taxRes");
+		PPEmploymentDetailType empDet = new PPEmploymentDetailType();
+		empDet.setJobTitle("job title");
+		det.setEmploymentDetails(new PPEmploymentDetails(empDet));
+//		det.setCitizenships("cit");
+//		det.setTaxResidency("taxRes");
 		det.setEmail("a@b.com");
 //		det.setTelephone(value);
 		det.setStaffIndicator(true);
-		det.setStaff("sta");
+//		det.setStaff("sta");
 //		det.setGender("gen");
 //		det.setDateOfBirth(System.currentTimeMillis());
 //		det.setNationality

@@ -18,6 +18,8 @@ import org.mockito.junit.MockitoRule;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.config.MariaDBConfig;
 import com.orwellg.umbrella.commons.config.params.MariaDBParams;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
@@ -128,7 +130,9 @@ public class CreatePartyBoltTest {
 		String detIdToCreate = idGen.generateLocalUniqueIDStr();
 		detT.setId(detIdToCreate);
 		detT.setPartyID(partyIdToCreate);
-		detT.setEmploymentDetails("employment details");
+		PPEmploymentDetailType empDet = new PPEmploymentDetailType();
+		empDet.setJobTitle("job title");
+		detT.setEmploymentDetails(new PPEmploymentDetails(empDet));
 		p.getParty().setPersonalDetails(detT);
 
 		// When saveParty

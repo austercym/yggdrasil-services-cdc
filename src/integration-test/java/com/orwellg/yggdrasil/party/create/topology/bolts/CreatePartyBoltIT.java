@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.junit.AfterClass;
@@ -17,6 +18,8 @@ import org.junit.Test;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
@@ -96,10 +99,9 @@ public class CreatePartyBoltIT {
 			client.close();
 		}
 		
-		TopologyConfigWithLdapFactory.getTopologyConfig().close();
         TopologyConfigWithLdapFactory.resetTopologyConfig();
-		TopologyConfigFactory.getTopologyConfig().close();
 		TopologyConfigFactory.resetTopologyConfig();
+		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 
         // Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.
@@ -148,7 +150,9 @@ public class CreatePartyBoltIT {
 		String detIdToCreate = idGen.generateLocalUniqueIDStr();
 		detT.setId(detIdToCreate);
 		detT.setPartyID(partyIdToCreate);
-		detT.setEmploymentDetails("employment details");
+		PPEmploymentDetailType empDet = new PPEmploymentDetailType();
+		empDet.setJobTitle("job title");
+		detT.setEmploymentDetails(new PPEmploymentDetails(empDet));
 		p.getParty().setPersonalDetails(detT);
 
 		// When saveParty

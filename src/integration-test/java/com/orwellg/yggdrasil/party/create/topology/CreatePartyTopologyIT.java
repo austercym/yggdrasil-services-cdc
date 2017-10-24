@@ -42,6 +42,8 @@ import com.orwellg.umbrella.avro.types.event.ProcessIdentifierType;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
@@ -144,11 +146,9 @@ public class CreatePartyTopologyIT {
 			client.close();
 		}
 		
-		TopologyConfigWithLdapFactory.getTopologyConfig().close();
-		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
-		TopologyConfigFactory.getTopologyConfig().close();
 		TopologyConfigFactory.resetTopologyConfig();
+		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 		
 		if (cluster != null) {
 			cluster.shutdown();
@@ -387,7 +387,9 @@ public class CreatePartyTopologyIT {
 		pt.setPassword(password);
 		
 		PartyPersonalDetailsType persDet = new PartyPersonalDetailsType();
-		persDet.setEmploymentDetails("emp det");
+		PPEmploymentDetailType empDet = new PPEmploymentDetailType();
+		empDet.setJobTitle("job title");
+		persDet.setEmploymentDetails(new PPEmploymentDetails(empDet));
 		pt.setPersonalDetails(persDet);
 		
 		return pt;

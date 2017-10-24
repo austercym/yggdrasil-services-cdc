@@ -8,13 +8,20 @@ import java.sql.SQLException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.gson.Gson;
+import com.orwellg.umbrella.avro.types.commons.CitizenshipsList;
+import com.orwellg.umbrella.avro.types.commons.TaxResidencyList;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
+import com.orwellg.umbrella.avro.types.party.personal.PPStaffType;
 
 public class PartyPersonalDetailsDAO {
 
 	private final static Logger LOG = LogManager.getLogger(PartyPersonalDetailsDAO.class);
 
 	protected Connection con;
+	
+	protected Gson gson = new Gson();
 
 	public PartyPersonalDetailsDAO(Connection con) {
 		this.con = con;
@@ -52,14 +59,14 @@ public class PartyPersonalDetailsDAO {
 			st = con.prepareStatement(query);
 			st.setString(1, p.getId());
 			st.setString(2, p.getPartyID());
-			st.setString(3, p.getEmploymentDetails());
-			st.setString(4, p.getCitizenships());
-			st.setString(5, p.getTaxResidency());
+			st.setString(3, gson.toJson(p.getEmploymentDetails()));
+			st.setString(4, gson.toJson(p.getCitizenships()));
+			st.setString(5, gson.toJson(p.getTaxResidency()));
 			st.setString(6, p.getEmail());
 //			st.setString(7, p.getTelephone());
 			Boolean staffIndicator = p.getStaffIndicator();
 			st.setInt(7, (staffIndicator != null && staffIndicator == Boolean.TRUE ? 1 : 0));
-			st.setString(8, p.getStaff());
+			st.setString(8, gson.toJson(p.getStaff()));
 //			TODO fix DB then st.setString(9, p.getGender());
 //			TODO fix DB and avro then st.setDate(9, new Date(p.getDateOfBirth()));
 
@@ -115,13 +122,13 @@ public class PartyPersonalDetailsDAO {
 		// PP_ID, Party_ID, EmploymentDetails, Citizenships, TaxResidency, Email, Telephone, StaffIndicator, Staff, Gender, DateOfBirth, Nationality, Tags
 		p.setId(rs.getString("PP_ID"));
 		p.setPartyID(rs.getString("Party_ID"));
-		p.setEmploymentDetails(rs.getString("EmploymentDetails"));
-		p.setCitizenships(rs.getString("Citizenships"));
-		p.setTaxResidency(rs.getString("TaxResidency"));
+		p.setEmploymentDetails(gson.fromJson(rs.getString("EmploymentDetails"), PPEmploymentDetails.class));
+		p.setCitizenships(gson.fromJson(rs.getString("Citizenships"), CitizenshipsList.class));
+		p.setTaxResidency(gson.fromJson(rs.getString("TaxResidency"), TaxResidencyList.class));
 		p.setEmail(rs.getString("Email"));
 //				p.setTelephone(rs.getString("Telephone"));
 		p.setStaffIndicator((rs.getInt("StaffIndicator") == 1 ? true : false));
-		p.setStaff(rs.getString("Staff"));
+		p.setStaff(gson.fromJson(rs.getString("Staff"), PPStaffType.class));
 		p.setGender(rs.getString("Gender"));
 //				Date date = rs.getDate("DateOfBirth");
 //				p.setDateOfBirth((date != null ? date.getTime() : null));

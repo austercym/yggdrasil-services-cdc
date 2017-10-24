@@ -62,6 +62,9 @@ public class TopologyConfigWithLdapFactory {
 	 * Useful for testing.
 	 */
 	public static void resetTopologyConfig() {
-		topologyConfig = null;
+		if (topologyConfig != null) {
+			topologyConfig.close();
+			topologyConfig = null;
+		}
 	}
 }

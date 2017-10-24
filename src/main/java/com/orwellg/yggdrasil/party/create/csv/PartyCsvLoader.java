@@ -33,6 +33,8 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.gson.Gson;
 import com.orwellg.umbrella.avro.types.commons.AddressType;
+import com.orwellg.umbrella.avro.types.commons.CitizenshipsList;
+import com.orwellg.umbrella.avro.types.commons.TaxResidencyList;
 import com.orwellg.umbrella.avro.types.event.EntityIdentifierType;
 import com.orwellg.umbrella.avro.types.event.Event;
 import com.orwellg.umbrella.avro.types.event.EventType;
@@ -47,6 +49,8 @@ import com.orwellg.umbrella.avro.types.party.PartyNotificationPreferencesType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyQuestionaireType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
+import com.orwellg.umbrella.avro.types.party.personal.PPStaffType;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
@@ -95,14 +99,14 @@ public class PartyCsvLoader {
 			if (record.isMapped("EmploymentDetails")) {
 				// EmploymentDetails Citizenships	TaxResidency	Email	Telephone	StaffIndicator	Staff	Gender	DateOfBirth	Nationality	Tags
 				PartyPersonalDetailsType det = new PartyPersonalDetailsType();
-				det.setEmploymentDetails(record.get("EmploymentDetails"));
-				det.setCitizenships(record.get("Citizenships"));
-				det.setTaxResidency(record.get("TaxResidency"));
+				det.setEmploymentDetails(gson.fromJson(record.get("EmploymentDetails"), PPEmploymentDetails.class));
+				det.setCitizenships(gson.fromJson(record.get("Citizenships"), CitizenshipsList.class));
+				det.setTaxResidency(gson.fromJson(record.get("TaxResidency"), TaxResidencyList.class));
 				det.setEmail(record.get("Email"));
 //				det.setTelephone(value);
 				String staffIndicator = record.get("StaffIndicator");
 				det.setStaffIndicator(("VERDADERO".equalsIgnoreCase(staffIndicator) || "TRUE".equals(staffIndicator) ? true : false));
-				det.setStaff(record.get("Staff"));
+//				TODO fix csv and then det.setStaff(gson.fromJson(record.get("Staff"), PPStaffType.class));
 				det.setGender(record.get("Gender"));
 //				det.setDateOfBirth(value);
 //				det.setNationality

@@ -49,6 +49,7 @@ public class TopologyConfigWithLdapIT {
 		zookeeperHosts = zkInstance.getConnectString();
 
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigFactory.resetTopologyConfig();
 		
 		LOG.info("Curator connecting to zookeeper {}...", zookeeperHosts);
 		client = CuratorFrameworkFactory.newClient(zookeeperHosts, new ExponentialBackoffRetry(1000, 3));
@@ -65,18 +66,18 @@ public class TopologyConfigWithLdapIT {
 			client.close();
 		}
 
-		TopologyConfigWithLdapFactory.getTopologyConfig().close();
 //		client = ZookeeperUtils.getStartedZKClient(config.getZookeeperPath(), config.getZookeeperConnection());
-		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
-		TopologyConfigFactory.getTopologyConfig().close();
 		TopologyConfigFactory.resetTopologyConfig();
+		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 
 		// Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.
 		// zkInstance.destroy().ready(duration);
-		zkInstance.stop();
-		zkInstance.close();
+		if (zkInstance != null) {
+			zkInstance.stop();
+			zkInstance.close();
+		}
 	}
 
 	@Test
