@@ -109,6 +109,8 @@ public class TopologyConfigWithLdapIT {
 		String usersGroupDn = "cn=users,dc=amazonaws,dc=com";
 		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.usersgroup.dn", usersGroupDn);
 
+		zk.printAllProps();
+
 		// When loaded (reads propertiesFile and zookeeper)
 		TopologyConfigWithLdap conf = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory
 				.getTopologyConfig(propertiesFile);
@@ -151,6 +153,8 @@ public class TopologyConfigWithLdapIT {
 		String uniqueIdClusterSuffix = "IPAGO";
 		zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
 
+		zk.printAllProps();
+		
 		// When loaded (reads propertiesFile and zookeeper)
 		TopologyConfigWithLdap conf = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory
 				.getTopologyConfig(propertiesFile);

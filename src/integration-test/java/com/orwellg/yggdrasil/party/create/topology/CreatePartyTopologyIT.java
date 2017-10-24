@@ -96,6 +96,8 @@ public class CreatePartyTopologyIT {
 		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.admin.pwd", LdapParams.ADMIN_PWD_DEFAULT);
 		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.usersgroup.dn", LdapParams.USERS_GROUP_DN_DEFAULT);
 		
+		zk.printAllProps();
+		
 		MariaDbManager mariaDbManager = MariaDbManager.getInstance();
 		partyDAO = new PartyDAO(mariaDbManager.getConnection());
 		partyBO = new PartyBO(mariaDbManager.getConnection());
