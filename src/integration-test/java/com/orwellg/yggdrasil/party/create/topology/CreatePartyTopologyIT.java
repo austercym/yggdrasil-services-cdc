@@ -12,8 +12,6 @@ import javax.naming.directory.DirContext;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -23,6 +21,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.LocalCluster;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -38,13 +37,14 @@ import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
+import com.orwellg.umbrella.commons.utils.config.ZookeeperUtils;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
 import com.orwellg.yggdrasil.party.bo.PartyBO;
 import com.orwellg.yggdrasil.party.config.LdapParams;
-import com.orwellg.yggdrasil.party.config.TopologyConfigWihLdap;
+import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 import com.orwellg.yggdrasil.party.dao.PartyDAO;
@@ -64,13 +64,20 @@ public class CreatePartyTopologyIT {
 
 	protected PartyDAO partyDAO;
 	protected PartyBO partyBO;
+	
+	protected CuratorFramework client;
+	
+	protected LocalCluster cluster;
 
 	@Before
 	public void setUp() throws Exception {
 		// Set for tests: zookeeper property /com/orwellg/unique-id-generator/cluster-suffix = IPAGO
-		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig();
-		CuratorFramework client = CuratorFrameworkFactory.newClient(config.getZookeeperConnection(), new ExponentialBackoffRetry(1000, 3));
-		client.start();
+		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigWithLdap config = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig();
+//		client = CuratorFrameworkFactory.newClient(config.getZookeeperConnection(), new ExponentialBackoffRetry(1000, 3));
+//		client.start();
+		client = ZookeeperUtils.getStartedZKClient(config.getZookeeperPath(), config.getZookeeperConnection());
+//		client.blockUntilConnected();
 
 		ZooKeeperHelper zk = new ZooKeeperHelper(client);
 		
@@ -79,11 +86,26 @@ public class CreatePartyTopologyIT {
 		String uniqueIdClusterSuffix = "IPAGO";
 		zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
 		
-		MariaDbManager mariaDbManager = MariaDbManager.getInstance("db-local.yaml");
+		MariaDbManager mariaDbManager = MariaDbManager.getInstance();
 		partyDAO = new PartyDAO(mariaDbManager.getConnection());
 		partyBO = new PartyBO(mariaDbManager.getConnection());
+
+		LOG.info("LocalCluster setting up...");
+		cluster = new LocalCluster();
+		LOG.info("...LocalCluster set up.");
 	}
     
+	@After
+	public void stop() throws Exception {
+//		// Close the curator client
+//		client.close();
+		
+		TopologyConfigWithLdapFactory.getTopologyConfig().close();
+		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		
+		cluster.shutdown();
+	}
+	
 	/**
 	 * Load topology in storm and then test it. May take several minutes to finish
 	 * (see requestCreatePartyToTopologyAndWaitResponse()).
@@ -93,22 +115,9 @@ public class CreatePartyTopologyIT {
 	@Test 
 	public void testSetUpAndExecPartyTopology() throws Exception {
 		// Set for tests: zookeeper property /com/orwellg/unique-id-generator/cluster-suffix = IPAGO
-		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig();
-		CuratorFramework client = CuratorFrameworkFactory.newClient(config.getZookeeperConnection(), new ExponentialBackoffRetry(1000, 3));
-		client.start();
+		TopologyConfigWithLdapFactory.getTopologyConfig();
 
-		// And zookeeper with params set
-		ZooKeeperHelper zk = new ZooKeeperHelper(client);
-		
-		// #uniqueid must be set anyway in zookeeper:
-		// create /com/orwellg/unique-id-generator/cluster-suffix IPAGO
-		String uniqueIdClusterSuffix = "IPAGO";
-		zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
-		
 		// Load topology in local storm cluster
-		LOG.info("LocalCluster setting up...");
-		LocalCluster cluster = new LocalCluster();
-		LOG.info("...LocalCluster set up.");
 		CreatePartyTopology.loadTopologyInStorm(cluster);
 
 		// When request then get response and created element
@@ -153,7 +162,7 @@ public class CreatePartyTopologyIT {
 		String base64Event = Base64.encodeBase64String(RawMessageUtils.encode(Event.SCHEMA$, event).array());
 
 		// Write CreateParty event to request kafka topic.
-		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig();
+		TopologyConfigWithLdap config = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig();
 		String bootstrapServer = config.getKafkaBootstrapHosts();
 		String topic = config.getKafkaSubscriberSpoutConfig().getTopic().getName().get(0);
 		Producer<String, String> producer = makeProducer(bootstrapServer);
@@ -171,7 +180,7 @@ public class CreatePartyTopologyIT {
 		// Check if PartyTopology returns kafka PartyCreated result event
 		LOG.info("Checking if Party topology has returned to kafka topic...");
 		KafkaConsumer<String, String> consumer = makeConsumer(bootstrapServer);
-		String responseTopic = "party.result.event.1";
+		String responseTopic = config.getKafkaPublisherBoltConfig().getTopic().getName().get(0);
 		consumer.subscribe(Arrays.asList(responseTopic));
 		PartyIdType createdPartyID = waitAndConsume(parentKey, processId, eventKeyId, maxRetries, retries, interval,
 				consumer);

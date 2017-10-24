@@ -21,7 +21,7 @@ import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
 import com.orwellg.yggdrasil.party.bo.PartyBO;
 import com.orwellg.yggdrasil.party.config.LdapParams;
-import com.orwellg.yggdrasil.party.config.TopologyConfigWihLdap;
+import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 import com.orwellg.yggdrasil.party.ldap.LdapUtil;
@@ -36,8 +36,6 @@ public class PartyJoinCreateAndLdapBolt extends JoinFutureBolt<Party> {
 	private static final long serialVersionUID = 1L;
 	
 	protected PartyBO partyBO = null;
-	
-	protected LdapUtil ldapUtil = null;
 	
 //	/**
 //	 * Define the name of the success stream
@@ -78,13 +76,11 @@ public class PartyJoinCreateAndLdapBolt extends JoinFutureBolt<Party> {
 		try {
 			MariaDbManager man = MariaDbManager.getInstance();
 			partyBO = new PartyBO(man.getConnection());
-			if (ldapUtil == null) {
-				// Get (and init if they weren't before) topology application-wide params. Tries to connect to zookeeper:
-				TopologyConfigWihLdap topologyConfig = TopologyConfigWithLdapFactory.getTopologyConfig();
-				// LdapUtil specific params
-				LdapParams ldapParams = topologyConfig.getLdapConfig().getLdapParams();
-				ldapUtil = new LdapUtil(ldapParams);
-			}
+			// Get (and init if they weren't before) topology application-wide params. Tries to connect to zookeeper:
+			TopologyConfigWithLdap topologyConfig = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig();
+			// LdapUtil specific params
+			LdapParams ldapParams = topologyConfig.getLdapConfig().getLdapParams();
+			LdapUtil ldapUtil = new LdapUtil(ldapParams);
 
 			CompletableFuture<ExecutionResultItem> createFut = null;
 			CompletableFuture<ExecutionResultItem> ldapFut = null;

@@ -2,10 +2,9 @@ package com.orwellg.yggdrasil.party.ldap;
 
 import static org.junit.Assert.assertEquals;
 
-import java.time.Duration;
-
 import javax.naming.directory.DirContext;
 
+import org.apache.curator.test.TestingServer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.AfterClass;
@@ -13,48 +12,52 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.yggdrasil.party.config.LdapParams;
-import com.orwellg.yggdrasil.party.config.TopologyConfigWihLdap;
+import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
-
-import zookeeperjunit.ZKFactory;
-import zookeeperjunit.ZKInstance;
 
 public class LdapUtilIT {
 
-	/**In-process zookeeper instance*/
-	private static final ZKInstance zkInstance = ZKFactory.apply()
-			 .withPort(6969)
-			 .create();	
+//	/**In-process zookeeper instance*/
+//	private static final ZKInstance zkInstance = ZKFactory.apply()
+//			 .withPort(6969)
+//			 .create();	
+    protected static TestingServer zkInstance;
 
 	private final static Logger LOG = LogManager.getLogger(LdapUtilIT.class);
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Throwable {
 		// Starts a ZooKeeper server
-		zkInstance.start().result(Duration.ofSeconds(90));
+//		zkInstance.start().result(Duration.ofSeconds(90));
+		zkInstance = new TestingServer(6969);
+//		zkInstance.start();
 
-		TopologyConfigFactory.resetTopologyConfig();
+//		zookeeperHosts = zkInstance.getConnectString();
 		
-		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
+		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		
+		TopologyConfigWithLdap config = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
 		assertEquals(LdapParams.URL_DEFAULT, config.getLdapConfig().getLdapParams().getUrl());
 	}
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-        TopologyConfigFactory.resetTopologyConfig();
+		TopologyConfigWithLdapFactory.getTopologyConfig().close();
+		TopologyConfigWithLdapFactory.resetTopologyConfig();
 
         // Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.
-		zkInstance.destroy().ready(Duration.ofSeconds(90));
+//		zkInstance.destroy().ready(Duration.ofSeconds(90));
+		zkInstance.stop();
+        zkInstance.close();
 	}
 
 	
 	@Test
 	public void testAddUserAndGetById() throws Exception {
-		TopologyConfigWihLdap config = TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
+		TopologyConfigWithLdap config = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
 		// LdapUtil specific params
 		LdapParams ldapParams = config.getLdapConfig().getLdapParams();
 		LdapUtil ldapUtil = new LdapUtil(ldapParams);

@@ -11,7 +11,6 @@ import org.apache.storm.generated.StormTopology;
 
 import com.orwellg.onboarding.party.topology.bolts.actions.GenerateUniqueIdBoltParty;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
-import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.storm.topology.TopologyFactory;
 import com.orwellg.umbrella.commons.storm.topology.component.bolt.EventErrorBolt;
 import com.orwellg.umbrella.commons.storm.topology.component.bolt.KafkaEventGeneratorBolt;
@@ -23,6 +22,7 @@ import com.orwellg.umbrella.commons.storm.topology.generic.spout.GSpout;
 import com.orwellg.umbrella.commons.storm.wrapper.kafka.KafkaBoltWrapper;
 import com.orwellg.umbrella.commons.storm.wrapper.kafka.KafkaSpoutWrapper;
 import com.orwellg.umbrella.commons.utils.config.ZookeeperUtils;
+import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.create.topology.bolts.PartyJoinCreateAndLdapBolt;
 import com.orwellg.yggdrasil.party.create.topology.bolts.PartyKafkaEventProcessBolt;
 
@@ -108,7 +108,7 @@ public class CreatePartyTopology {
 		LOG.info("Creating {} topology...", TOPOLOGY_NAME);
 
 		// Read configuration params from topology.properties and zookeeper
-		TopologyConfig config = TopologyConfigFactory.getTopologyConfig();
+		TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig();
 
 		// Create the spout that read the events from Kafka
 		GSpout kafkaEventReader = new GSpout(KAFKA_EVENT_READER_COMPONENT_ID,

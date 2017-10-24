@@ -47,6 +47,7 @@ import com.orwellg.umbrella.avro.types.party.PartyNotificationPreferencesType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyQuestionaireType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
@@ -129,10 +130,7 @@ public class PartyCsvLoader {
 	}
 	
 	public void sendToKafkaParty(String bootstrapServer, List<Event> events) {
-//		SubscriberKafkaConfiguration configuration = SubscriberKafkaConfiguration
-//				.loadConfiguration(subscriberConfigFileName);
-//		String bootstrapServer = configuration.getBootstrap().getHost();
-		String topic = "party.action.event.1";
+		String topic = TopologyConfigWithLdapFactory.getTopologyConfig().getKafkaSubscriberSpoutConfig().getTopic().getName().get(0);
 		Producer<String, String> producer = makeProducer(bootstrapServer);
 		for (Iterator<Event> iterator = events.iterator(); iterator.hasNext();) {
 			Event event = iterator.next();
@@ -227,7 +225,7 @@ public class PartyCsvLoader {
 		
 		try {
 			// Get (and init if they weren't before) party-storm application-wide params. Tries to connect to zookeeper:
-			TopologyConfigWithLdapFactory.getTopologyConfig();
+			TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig();
 
 			PartyCsvLoader pcl = new PartyCsvLoader();
 
@@ -235,7 +233,7 @@ public class PartyCsvLoader {
 			int interval = 1000;
 			
 			KafkaConsumer<String, String> consumer = pcl.makeConsumer(bootstrapServer);
-			String partyResponseTopic = "party.result.event.1";
+			String partyResponseTopic = config.getKafkaPublisherBoltConfig().getTopic().getName().get(0);
 
 			/////////////
 			// PERSONAL PARTY

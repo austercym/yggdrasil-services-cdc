@@ -2,8 +2,7 @@ package com.orwellg.yggdrasil.party.create.topology.bolts;
 
 import static org.junit.Assert.assertEquals;
 
-import java.time.Duration;
-
+import org.apache.curator.test.TestingServer;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,23 +12,20 @@ import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
-import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
-import com.orwellg.yggdrasil.party.create.topology.bolts.CreatePartyBolt;
+import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 import com.orwellg.yggdrasil.party.dao.PartyDAO;
 import com.orwellg.yggdrasil.party.dao.PartyPersonalDetailsDAO;
 
-import zookeeperjunit.ZKFactory;
-import zookeeperjunit.ZKInstance;
-
 public class CreatePartyBoltIT {
 
-	/**In-process zookeeper instance*/
-	private static final ZKInstance zkInstance = ZKFactory.apply()
-			 .withPort(6969)
-			 .create();	
+//	/**In-process zookeeper instance*/
+//	private static final ZKInstance zkInstance = ZKFactory.apply()
+//			 .withPort(6969)
+//			 .create();	
+    protected static TestingServer zkInstance;
 	
 	// Local idgen not to need zookeeper connection
 	protected UniqueIDGeneratorLocal idGen = new UniqueIDGeneratorLocal();
@@ -40,11 +36,15 @@ public class CreatePartyBoltIT {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Throwable {
 		// Starts a ZooKeeper server
-		zkInstance.start().result(Duration.ofSeconds(90));
+//		zkInstance.start().result(Duration.ofSeconds(90));
+		zkInstance = new TestingServer(6969);
+//		zkInstance.start();
 
-		TopologyConfigFactory.resetTopologyConfig();
+//		zookeeperHosts = zkInstance.getConnectString();
 		
-		TopologyConfig config = TopologyConfigFactory.getTopologyConfig("topo.properties");
+		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		
+		TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
 		assertEquals("localhost", config.getMariaDBConfig().getMariaDBParams().getHost());
 		assertEquals("3306", config.getMariaDBConfig().getMariaDBParams().getPort());
 
@@ -54,11 +54,14 @@ public class CreatePartyBoltIT {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-        TopologyConfigFactory.resetTopologyConfig();
+		TopologyConfigWithLdapFactory.getTopologyConfig().close();
+        TopologyConfigWithLdapFactory.resetTopologyConfig();
 
         // Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.
-		zkInstance.destroy().ready(Duration.ofSeconds(90));
+//		zkInstance.destroy().ready(Duration.ofSeconds(90));
+		zkInstance.stop();
+        zkInstance.close();
 	}
 
 	@Test

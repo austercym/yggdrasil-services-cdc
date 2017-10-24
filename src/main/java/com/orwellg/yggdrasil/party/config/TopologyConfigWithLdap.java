@@ -2,15 +2,15 @@ package com.orwellg.yggdrasil.party.config;
 
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 
-public class TopologyConfigWihLdap extends TopologyConfig {
+public class TopologyConfigWithLdap extends TopologyConfig {
 
 	protected LdapConfig ldapConfig;
 
-	public TopologyConfigWihLdap() {
+	public TopologyConfigWithLdap() {
 		this(DEFAULT_PROPERTIES_FILE);
 	}
 
-	public TopologyConfigWihLdap(String propertiesFile) {
+	public TopologyConfigWithLdap(String propertiesFile) {
 		super(propertiesFile);
 		ldapConfig = new LdapConfig(propertiesFile);
 	}

@@ -26,6 +26,7 @@
 		<gson.google.version>2.8.1</gson.google.version>
 		<archaius.version>0.7.5</archaius.version>
 		<org.apache.codec.version>1.10</org.apache.codec.version>
+		<curator.version>2.3.0</curator.version>
 
 		<junit.version>4.12</junit.version>
 		<commons.io.version>2.5</commons.io.version>
@@ -34,6 +35,27 @@
 	</properties>
 
 	<dependencies>
+		<!-- Explicitly specify version of guava and curator. curator-client 2.3 needs guava 14.x that is 
+			incompatible with newer versions of guava that are needed by cassandra-driver-core -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>14.0.1</version>
+		</dependency>
+		<!-- Explicitly specify version of guava and curator. curator-client 2.3 needs guava 14.x that is 
+			incompatible with newer versions of guava that are needed by cassandra-driver-core -->
+		<dependency>
+			<groupId>org.apache.curator</groupId>
+			<artifactId>curator-recipes</artifactId>
+			<version>${curator.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.zookeeper</groupId>
+					<artifactId>zookeeper</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
 		<!-- UMBRELLA COMMONS dependencies -->
 		<dependency>
 			<groupId>com.orwellg.umbrella</groupId>
@@ -179,11 +201,19 @@
 		</dependency>
 		<!-- Launch zookeeper server in tests -->
 		<dependency>
+			<groupId>org.apache.curator</groupId>
+			<artifactId>curator-test</artifactId>
+			<version>${curator.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- 
+		<dependency>
 			<groupId>org.dmonix.junit</groupId>
 			<artifactId>zookeeper-junit</artifactId>
 			<version>1.2</version>
 			<scope>test</scope>
 		</dependency>
+		-->
 		<!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
 		<dependency>
 			<groupId>com.h2database</groupId>
