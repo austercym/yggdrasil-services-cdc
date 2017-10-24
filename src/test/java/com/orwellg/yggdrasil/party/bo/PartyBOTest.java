@@ -19,7 +19,7 @@ import com.orwellg.yggdrasil.h2.H2DbHelper;
 public class PartyBOTest {
 
 	protected static final String JDBC_CONN = "jdbc:h2:mem:test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
-	private static final String DATABASE_SQL = "DataModel/MariaDB/mariadb_obs_datamodel.sql";
+	private static final String DATABASE_SQL = "/DataModel/MariaDB/mariadb_obs_datamodel.sql";
 	private static final String DELIMITER = ";";
 	
 	protected PartyBO partyBO;

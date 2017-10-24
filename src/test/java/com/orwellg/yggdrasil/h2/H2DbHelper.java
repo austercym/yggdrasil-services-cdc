@@ -1,6 +1,5 @@
 package com.orwellg.yggdrasil.h2;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -16,11 +15,9 @@ public class H2DbHelper {
 	public void createDbSchema(Connection con, String sqlFile, String delimiter) throws Exception {
 		Statement s = con.createStatement();
 
-		ClassLoader classLoader = getClass().getClassLoader();
+//		ClassLoader classLoader = getClass().getClassLoader();
 
-		File file = new File(classLoader.getResource(sqlFile).getFile());
-
-		Scanner sc = new Scanner(file);
+		Scanner sc = new Scanner(this.getClass().getResourceAsStream(sqlFile));
 
 		sc.useDelimiter(delimiter);
 
