@@ -2,6 +2,8 @@ package com.orwellg.yggdrasil.party.create.topology;
 
 import static org.junit.Assert.assertEquals;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -14,7 +16,9 @@ import javax.naming.directory.DirContext;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -38,13 +42,14 @@ import com.orwellg.umbrella.avro.types.event.ProcessIdentifierType;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
-import com.orwellg.umbrella.commons.utils.config.ZookeeperUtils;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
+import com.orwellg.yggdrasil.h2.H2DbHelper;
 import com.orwellg.yggdrasil.party.bo.PartyBO;
 import com.orwellg.yggdrasil.party.config.LdapParams;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
@@ -63,6 +68,10 @@ public class CreatePartyTopologyIT {
             .waitingForService("kafka", HealthChecks.toHaveAllPortsOpen())
             .build();
 
+	protected static final String JDBC_CONN = "jdbc:h2:mem:test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+	private static final String DATABASE_SQL = "/DataModel/MariaDB/mariadb_obs_datamodel.sql";
+	private static final String DELIMITER = ";";
+    
     public final static Logger LOG = LogManager.getLogger(CreatePartyTopologyIT.class);
 
 	protected PartyDAO partyDAO;
@@ -74,12 +83,18 @@ public class CreatePartyTopologyIT {
 
 	@Before
 	public void setUp() throws Exception {
+		// Start H2 db server in-memory
+		Connection connection = DriverManager.getConnection(JDBC_CONN);
+		
+		// Create schema
+		H2DbHelper h2 = new H2DbHelper();
+		h2.createDbSchema(connection, DATABASE_SQL, DELIMITER);
+		
 		// Set for tests: zookeeper property /com/orwellg/unique-id-generator/cluster-suffix = IPAGO
-		TopologyConfigWithLdapFactory.resetTopologyConfig();
-		TopologyConfigWithLdap config = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig();
-//		client = CuratorFrameworkFactory.newClient(config.getZookeeperConnection(), new ExponentialBackoffRetry(1000, 3));
-//		client.start();
-		client = ZookeeperUtils.getStartedZKClient(config.getZookeeperPath(), config.getZookeeperConnection());
+		String zookeeperHost = "localhost:2181";
+		client = CuratorFrameworkFactory.newClient(zookeeperHost, new ExponentialBackoffRetry(1000, 3));
+		client.start();
+//		client = ZookeeperUtils.getStartedZKClient(config.getZookeeperPath(), config.getZookeeperConnection());
 //		client.blockUntilConnected();
 
 		ZooKeeperHelper zk = new ZooKeeperHelper(client);
@@ -95,10 +110,25 @@ public class CreatePartyTopologyIT {
 		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.admin.dn", LdapParams.ADMIN_DN_DEFAULT);
 		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.admin.pwd", LdapParams.ADMIN_PWD_DEFAULT);
 		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.usersgroup.dn", LdapParams.USERS_GROUP_DN_DEFAULT);
+
+		zk.setZkProp("/com/orwellg/yggdrasil/mariadb/yggdrassil.mariadb.url", JDBC_CONN);
+		zk.setZkProp("/com/orwellg/yggdrasil/mariadb/yggdrassil.mariadb.user", "");
+		zk.setZkProp("/com/orwellg/yggdrasil/mariadb/yggdrassil.mariadb.password", "");
 		
 		zk.printAllProps();
 		
+		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigWithLdap config = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig();
+		assertEquals(zookeeperHost, config.getZookeeperConnection());
+		TopologyConfigFactory.resetTopologyConfig();
+		TopologyConfigFactory.getTopologyConfig();
+		assertEquals(zookeeperHost, TopologyConfigFactory.getTopologyConfig().getZookeeperConnection());
+		assertEquals(JDBC_CONN, TopologyConfigFactory.getTopologyConfig().getMariaDBConfig().getMariaDBParams().getUrl());
+		
 		MariaDbManager mariaDbManager = MariaDbManager.getInstance();
+		
+		assertEquals(JDBC_CONN, MariaDbManager.getUrl());
+		
 		partyDAO = new PartyDAO(mariaDbManager.getConnection());
 		partyBO = new PartyBO(mariaDbManager.getConnection());
 
@@ -109,14 +139,20 @@ public class CreatePartyTopologyIT {
     
 	@After
 	public void stop() throws Exception {
-//		// Close the curator client
-//		client.close();
+		// Close the curator client
+		if (client != null) {
+			client.close();
+		}
 		
 		TopologyConfigWithLdapFactory.getTopologyConfig().close();
 		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigFactory.getTopologyConfig().close();
+		TopologyConfigFactory.resetTopologyConfig();
 		
-		cluster.shutdown();
+		if (cluster != null) {
+			cluster.shutdown();
+		}
 	}
 	
 	/**

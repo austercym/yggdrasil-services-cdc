@@ -55,7 +55,9 @@ public class ZooKeeperHelperIT {
 	@After
 	public void stop() throws Exception {
 		LOG.info("stop");
-		client.close();
+		if (client != null) {
+			client.close();
+		}
 		
 		// Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.

@@ -12,6 +12,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.yggdrasil.party.config.LdapParams;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
@@ -46,6 +47,8 @@ public class LdapUtilIT {
 	public static void tearDownAfterClass() throws Exception {
 		TopologyConfigWithLdapFactory.getTopologyConfig().close();
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigFactory.getTopologyConfig().close();
+		TopologyConfigFactory.resetTopologyConfig();
 
         // Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.

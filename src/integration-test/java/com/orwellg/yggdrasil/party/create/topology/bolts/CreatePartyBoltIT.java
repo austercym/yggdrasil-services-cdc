@@ -2,6 +2,12 @@ package com.orwellg.yggdrasil.party.create.topology.bolts;
 
 import static org.junit.Assert.assertEquals;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -11,9 +17,12 @@ import org.junit.Test;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
-import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
+import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
+import com.orwellg.yggdrasil.h2.H2DbHelper;
+import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 import com.orwellg.yggdrasil.party.dao.PartyDAO;
@@ -21,11 +30,14 @@ import com.orwellg.yggdrasil.party.dao.PartyPersonalDetailsDAO;
 
 public class CreatePartyBoltIT {
 
-//	/**In-process zookeeper instance*/
-//	private static final ZKInstance zkInstance = ZKFactory.apply()
-//			 .withPort(6969)
-//			 .create();	
+	/**In-process zookeeper instance*/
     protected static TestingServer zkInstance;
+
+	protected static final String JDBC_CONN = "jdbc:h2:mem:test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+	private static final String DATABASE_SQL = "/DataModel/MariaDB/mariadb_obs_datamodel.sql";
+	private static final String DELIMITER = ";";
+    
+	protected static CuratorFramework client;
 	
 	// Local idgen not to need zookeeper connection
 	protected UniqueIDGeneratorLocal idGen = new UniqueIDGeneratorLocal();
@@ -35,16 +47,41 @@ public class CreatePartyBoltIT {
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Throwable {
+		// Start H2 db server in-memory
+		Connection connection = DriverManager.getConnection(JDBC_CONN);
+		
+		// Create schema
+		H2DbHelper h2 = new H2DbHelper();
+		h2.createDbSchema(connection, DATABASE_SQL, DELIMITER);
+		
 		// Starts a ZooKeeper server
 //		zkInstance.start().result(Duration.ofSeconds(90));
 		zkInstance = new TestingServer(6969);
 //		zkInstance.start();
 
 //		zookeeperHosts = zkInstance.getConnectString();
+
+		String zookeeperHost = "127.0.0.1:6969";
+		client = CuratorFrameworkFactory.newClient(zookeeperHost, new ExponentialBackoffRetry(1000, 3));
+		client.start();
+		
+		ZooKeeperHelper zk = new ZooKeeperHelper(client);
+		
+		zk.printAllProps();
+
+		zk.setZkProp("/com/orwellg/yggdrasil/mariadb/yggdrassil.mariadb.url", JDBC_CONN);
+		zk.setZkProp("/com/orwellg/yggdrasil/mariadb/yggdrassil.mariadb.user", "");
+		zk.setZkProp("/com/orwellg/yggdrasil/mariadb/yggdrassil.mariadb.password", "");
+		
+		zk.printAllProps();
 		
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigWithLdap config = (TopologyConfigWithLdap) TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
+		assertEquals(zookeeperHost, config.getZookeeperConnection());
+		TopologyConfigFactory.resetTopologyConfig();
+		TopologyConfigFactory.getTopologyConfig("topo.properties");
+		assertEquals(JDBC_CONN, TopologyConfigFactory.getTopologyConfig().getMariaDBConfig().getMariaDBParams().getUrl());
 		
-		TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig("topo.properties");
 		assertEquals("localhost", config.getMariaDBConfig().getMariaDBParams().getHost());
 		assertEquals("3306", config.getMariaDBConfig().getMariaDBParams().getPort());
 
@@ -54,8 +91,15 @@ public class CreatePartyBoltIT {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
+		// Close the curator client
+		if (client != null) {
+			client.close();
+		}
+		
 		TopologyConfigWithLdapFactory.getTopologyConfig().close();
         TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigFactory.getTopologyConfig().close();
+		TopologyConfigFactory.resetTopologyConfig();
 
         // Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.

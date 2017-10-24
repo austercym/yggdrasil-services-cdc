@@ -15,6 +15,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
 
@@ -60,12 +61,16 @@ public class TopologyConfigWithLdapIT {
 	public void stop() throws Exception {
 		LOG.info("stop");
 		// Close the curator client
-		client.close();
+		if (client != null) {
+			client.close();
+		}
 
 		TopologyConfigWithLdapFactory.getTopologyConfig().close();
 //		client = ZookeeperUtils.getStartedZKClient(config.getZookeeperPath(), config.getZookeeperConnection());
 		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
+		TopologyConfigFactory.getTopologyConfig().close();
+		TopologyConfigFactory.resetTopologyConfig();
 
 		// Stops the ZooKeeper instance and also deletes any data files.
 		// This makes sure no state is kept between test cases.
