@@ -44,7 +44,11 @@ public class MariaDbManager {
 			MariaDBParams dbPar = TopologyConfigFactory.getTopologyConfig(topologyPropertiesFile).getMariaDBConfig().getMariaDBParams();
 			// jdbc:mysql://host:port/name
 			// jdbc:mysql://217.182.88.190:3306/IPAGOO_Customer_DB_TEST
-			url = String.format("jdbc:mysql://%s:%s/%s", dbPar.getHost(), dbPar.getPort(), dbPar.getDbName());
+			if (dbPar.getUrl() != null) {
+				url = dbPar.getUrl();
+			} else {
+				url = String.format("jdbc:mysql://%s:%s/%s", dbPar.getHost(), dbPar.getPort(), dbPar.getDbName());
+			}
 			user = dbPar.getUser();
 			pwd = dbPar.getPassword();
 			
@@ -52,7 +56,7 @@ public class MariaDbManager {
 			
 			instance = new MariaDbManager();
 			
-			setUpConnection(url, user, pwd);
+			setUpConnection(getUrl(), user, pwd);
 		}
 			
 		return instance;
@@ -72,7 +76,7 @@ public class MariaDbManager {
 		return con;
 	}
 
-	public String getUrl() {
+	public static String getUrl() {
 		return url;
 	}
 }

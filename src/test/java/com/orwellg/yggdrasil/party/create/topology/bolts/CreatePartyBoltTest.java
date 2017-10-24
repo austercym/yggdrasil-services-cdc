@@ -3,6 +3,9 @@ package com.orwellg.yggdrasil.party.create.topology.bolts;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,6 +24,7 @@ import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
+import com.orwellg.yggdrasil.h2.H2DbHelper;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 import com.orwellg.yggdrasil.party.dao.PartyDAO;
 import com.orwellg.yggdrasil.party.dao.PartyPersonalDetailsDAO;
@@ -33,6 +37,10 @@ public class CreatePartyBoltTest {
 	protected static PartyDAO partyDao;
 	protected static PartyPersonalDetailsDAO personalDetailsDao;
 
+	protected static final String JDBC_CONN = "jdbc:h2:mem:test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE";
+	private static final String DATABASE_SQL = "DataModel/MariaDB/mariadb_obs_datamodel.sql";
+	private static final String DELIMITER = ";";
+	
 	@Mock
 	protected TopologyConfig config;
 	
@@ -41,25 +49,35 @@ public class CreatePartyBoltTest {
 
 	@Mock
 	protected MariaDBParams mariaDbParams;
-	
+
 	@Rule
 	public MockitoRule mockitoRule = MockitoJUnit.rule();
 
 	@Before
 	public void setUp() throws Throwable {
+		// Start H2 db server in-memory
+		Connection connection = DriverManager.getConnection(JDBC_CONN);
+		
+		// Create schema
+		H2DbHelper h2 = new H2DbHelper();
+		h2.createDbSchema(connection, DATABASE_SQL, DELIMITER);
+		
 		TopologyConfigFactory.setTopologyConfig(config);
 
 		when(config.getMariaDBConfig()).thenReturn(mariaDbConfig);
 		when(mariaDbConfig.getMariaDBParams()).thenReturn(mariaDbParams);
-		when(mariaDbParams.getHost()).thenReturn("localhost");
-		when(mariaDbParams.getPort()).thenReturn("3306");
-		when(mariaDbParams.getDbName()).thenReturn("ipagoo");
-		when(mariaDbParams.getUser()).thenReturn("ipagoo");
-		when(mariaDbParams.getPassword()).thenReturn("tempo.99");
+//		when(mariaDbParams.getHost()).thenReturn("localhost");
+//		when(mariaDbParams.getPort()).thenReturn("3306");
+//		when(mariaDbParams.getDbName()).thenReturn("ipagoo");
+		when(mariaDbParams.getUser()).thenReturn("");
+		when(mariaDbParams.getPassword()).thenReturn("");
+
+		when(mariaDbParams.getUrl()).thenReturn(JDBC_CONN);
 		
 		TopologyConfig c2 = TopologyConfigFactory.getTopologyConfig("topo.properties");
 		assertEquals(config, c2);
-		assertEquals("jdbc:mysql://localhost:3306/ipagoo", MariaDbManager.getInstance().getUrl());
+		MariaDbManager.getInstance("topo.properties");
+		assertEquals(JDBC_CONN, MariaDbManager.getUrl());
 		
 		partyDao = new PartyDAO(MariaDbManager.getInstance().getConnection());
 		personalDetailsDao = new PartyPersonalDetailsDAO(MariaDbManager.getInstance().getConnection());
