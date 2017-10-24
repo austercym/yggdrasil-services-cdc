@@ -1,5 +1,7 @@
 package com.orwellg.yggdrasil.party.create.topology;
 
+import static org.junit.Assert.assertEquals;
+
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -12,6 +14,7 @@ import javax.naming.directory.DirContext;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -81,10 +84,17 @@ public class CreatePartyTopologyIT {
 
 		ZooKeeperHelper zk = new ZooKeeperHelper(client);
 		
+		zk.printAllProps();
+		
 		// #uniqueid must be set anyway in zookeeper:
 		// create /com/orwellg/unique-id-generator/cluster-suffix IPAGO
 		String uniqueIdClusterSuffix = "IPAGO";
 		zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
+		
+		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.url", LdapParams.URL_DEFAULT);
+		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.admin.dn", LdapParams.ADMIN_DN_DEFAULT);
+		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.admin.pwd", LdapParams.ADMIN_PWD_DEFAULT);
+		zk.setZkProp("/com/orwellg/yggdrasil/topologies-defaults/yggdrasil.ldap.usersgroup.dn", LdapParams.USERS_GROUP_DN_DEFAULT);
 		
 		MariaDbManager mariaDbManager = MariaDbManager.getInstance();
 		partyDAO = new PartyDAO(mariaDbManager.getConnection());
@@ -101,6 +111,7 @@ public class CreatePartyTopologyIT {
 //		client.close();
 		
 		TopologyConfigWithLdapFactory.getTopologyConfig().close();
+		assertEquals(CuratorFrameworkState.STOPPED, client.getState());
 		TopologyConfigWithLdapFactory.resetTopologyConfig();
 		
 		cluster.shutdown();
