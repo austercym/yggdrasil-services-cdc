@@ -12,9 +12,9 @@ import org.junit.Test;
 import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyNonPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.commons.repositories.h2.H2DbHelper;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
-import com.orwellg.yggdrasil.h2.H2DbHelper;
 
 public class PartyBOTest {
 

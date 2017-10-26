@@ -13,9 +13,9 @@ import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
+import com.orwellg.umbrella.commons.repositories.h2.H2DbHelper;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
-import com.orwellg.yggdrasil.h2.H2DbHelper;
 
 public class PartyPersonalDetailsDAOTest {
 

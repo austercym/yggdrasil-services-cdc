@@ -50,7 +50,6 @@ import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyQuestionaireType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
-import com.orwellg.umbrella.avro.types.party.personal.PPStaffType;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
