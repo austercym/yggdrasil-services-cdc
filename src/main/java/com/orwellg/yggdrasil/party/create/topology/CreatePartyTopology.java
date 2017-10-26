@@ -173,8 +173,8 @@ public class CreatePartyTopology {
 		// Create the basic config and upload the topology
 		Config conf = new Config();
 		conf.setDebug(false);
-		conf.setMaxTaskParallelism(30);
-		conf.setNumWorkers(4);
+		conf.setMaxTaskParallelism(config.getTopologyMaxTaskParallelism());
+		conf.setNumWorkers(config.getTopologyNumWorkers());
 
 		if (localCluster != null) {
 			// LocalCluster cluster = new LocalCluster();

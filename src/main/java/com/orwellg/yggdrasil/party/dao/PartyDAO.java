@@ -31,7 +31,7 @@ public class PartyDAO {
 	}
 
 	public void createParty(Party p) throws SQLException {
-		LOG.debug("createParty");
+		LOG.debug("createParty {}", p);
 
 		PreparedStatement st = null;
 		try {
@@ -72,7 +72,7 @@ public class PartyDAO {
 			// XXX Party_InfoAssets
 			st.execute();
 
-			LOG.debug("Party inserted partyId = {}, partyName = {} ", partyId);
+			LOG.debug("Party inserted partyId = {}, p = {} ", partyId, p);
 			
 		} finally {
 			if (st != null) {

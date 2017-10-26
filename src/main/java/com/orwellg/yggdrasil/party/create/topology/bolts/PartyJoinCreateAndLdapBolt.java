@@ -71,7 +71,7 @@ public class PartyJoinCreateAndLdapBolt extends JoinFutureBolt<Party> {
 		
 		String logPreffix = String.format("[Key: %s][ProcessId: %s] ", key, processId);
 		
-		LOG.debug("{}Previous starting processing the join validation for key {}", logPreffix, key);
+		LOG.debug("{}Processing key {}, eventData {}", logPreffix, key, eventData);
 		
 		try {
 			MariaDbManager man = MariaDbManager.getInstance();

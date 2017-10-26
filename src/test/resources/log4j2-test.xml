@@ -9,5 +9,8 @@
 		<Root level="INFO">
 			<AppenderRef ref="Console" />
 		</Root>
+		<Logger name="com.orwellg.yggdrasil.party.create.topology.bolts.PartyJoinCreateAndLdapBolt" level="DEBUG" additivity="false">
+			<AppenderRef ref="Console" />
+		</Logger>
 	</Loggers>
 </Configuration>
