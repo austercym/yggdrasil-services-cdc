@@ -21,6 +21,8 @@ import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.repositories.h2.H2DbHelper;
+import com.orwellg.umbrella.commons.repositories.mariadb.impl.PartyDAO;
+import com.orwellg.umbrella.commons.repositories.mariadb.impl.PartyPersonalDetailsDAO;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
@@ -28,8 +30,6 @@ import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
-import com.orwellg.yggdrasil.party.dao.PartyDAO;
-import com.orwellg.yggdrasil.party.dao.PartyPersonalDetailsDAO;
 
 public class CreatePartyBoltIT {
 

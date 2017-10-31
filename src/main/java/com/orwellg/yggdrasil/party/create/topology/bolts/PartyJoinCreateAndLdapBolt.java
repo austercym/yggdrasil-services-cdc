@@ -14,12 +14,12 @@ import org.apache.storm.tuple.Tuple;
 
 import com.google.gson.Gson;
 import com.orwellg.umbrella.avro.types.execution.ExecutionResultItem;
+import com.orwellg.umbrella.commons.repositories.mariadb.impl.PartyBO;
 import com.orwellg.umbrella.commons.storm.topology.component.bolt.JoinFutureBolt;
 import com.orwellg.umbrella.commons.storm.utils.factory.UnserializableFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
-import com.orwellg.yggdrasil.party.bo.PartyBO;
 import com.orwellg.yggdrasil.party.config.LdapParams;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
