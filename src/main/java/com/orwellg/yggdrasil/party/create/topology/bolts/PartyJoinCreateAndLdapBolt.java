@@ -14,17 +14,17 @@ import org.apache.storm.tuple.Tuple;
 
 import com.google.gson.Gson;
 import com.orwellg.umbrella.avro.types.execution.ExecutionResultItem;
+import com.orwellg.umbrella.commons.config.params.LdapParams;
 import com.orwellg.umbrella.commons.repositories.mariadb.impl.PartyBO;
 import com.orwellg.umbrella.commons.storm.topology.component.bolt.JoinFutureBolt;
 import com.orwellg.umbrella.commons.storm.utils.factory.UnserializableFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
-import com.orwellg.yggdrasil.party.config.LdapParams;
+import com.orwellg.umbrella.commons.utils.ldap.LdapUtil;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
-import com.orwellg.yggdrasil.party.ldap.LdapUtil;
 
 public class PartyJoinCreateAndLdapBolt extends JoinFutureBolt<Party> {
 
