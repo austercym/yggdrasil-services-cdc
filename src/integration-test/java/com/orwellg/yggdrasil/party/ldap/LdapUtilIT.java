@@ -12,9 +12,10 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.orwellg.umbrella.commons.config.params.LdapParams;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
+import com.orwellg.umbrella.commons.utils.ldap.LdapUtil;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
-import com.orwellg.yggdrasil.party.config.LdapParams;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdap;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 

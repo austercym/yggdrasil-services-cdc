@@ -1,5 +1,6 @@
 package com.orwellg.yggdrasil.party.config;
 
+import com.orwellg.umbrella.commons.config.LdapConfig;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 
 public class TopologyConfigWithLdap extends TopologyConfig {
