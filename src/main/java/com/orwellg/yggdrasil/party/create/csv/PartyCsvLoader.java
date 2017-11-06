@@ -238,6 +238,8 @@ public class PartyCsvLoader {
 			KafkaConsumer<String, String> consumer = pcl.makeConsumer(bootstrapServer);
 			String partyResponseTopic = config.getKafkaPublisherBoltConfig().getTopic().getName().get(0);
 
+			consumer.subscribe(Arrays.asList(partyResponseTopic));
+			
 			/////////////
 			// PERSONAL PARTY
 			{
@@ -245,7 +247,6 @@ public class PartyCsvLoader {
 				// Wait for result responses to all events
 				// Check if PartyTopology returns kafka PartyCreated result event
 				LOG.info("{} PersonalParty events sent to topology. Checking response to all events...", events.size());
-				consumer.subscribe(Arrays.asList(partyResponseTopic));
 				pcl.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, PartyEvents.CREATE_PARTY_COMPLETE.getEventName());
 			}
 
@@ -256,7 +257,6 @@ public class PartyCsvLoader {
 				// Wait for result responses to all events
 				// Check if PartyTopology returns kafka PartyCreated result event
 				LOG.info("{} NonPersonalParty events sent to topology. Checking response to all events...", events.size());
-				consumer.subscribe(Arrays.asList(partyResponseTopic));
 				pcl.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, PartyEvents.CREATE_PARTY_COMPLETE.getEventName());
 			}
 

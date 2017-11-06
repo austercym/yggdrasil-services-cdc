@@ -32,6 +32,12 @@
 		<Logger name="com.orwellg.umbrella.commons.utils.uniqueid" level="DEBUG" additivity="false">
 			<AppenderRef ref="CONSOLE" />
 		</Logger>
+		<Logger name="com.orwellg.yggdrasil.party.create.topology.bolts.PartyJoinCreateAndLdapBolt" level="DEBUG" additivity="false">
+			<AppenderRef ref="CONSOLE" />
+		</Logger>
+		<Logger name="com.orwellg.umbrella.commons.repositories.mariadb.impl.PartyBO" level="DEBUG" additivity="false">
+			<AppenderRef ref="CONSOLE" />
+		</Logger>
 		<!-- 
 		<Logger name="com.orwellg.ipagoo.aml" level="DEBUG">
 			<AppenderRef ref="CONSOLE" />

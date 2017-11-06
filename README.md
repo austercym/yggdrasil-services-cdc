@@ -54,7 +54,7 @@ Upload generated jar-with-dependencies.
 
 
 ```sh
-storm jar <name>-jar-with-dependencies.jar <topology-main-class> -c nimbus.host=hdf-node2
+storm jar <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.topology.CreatePartyTopology -c nimbus.host=hdf-node2
 ```
 
 ## Manually load CSV and sent to topology (send requests to kafka topic and wait response):

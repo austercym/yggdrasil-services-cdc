@@ -111,8 +111,10 @@ public class CreatePartyTopology {
 		TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig();
 
 		// Create the spout that read the events from Kafka
+		Integer kafkaSpoutHints = config.getKafkaSpoutHints();
+		LOG.info("kafkaSpoutHints = {}", kafkaSpoutHints);
 		GSpout kafkaEventReader = new GSpout(KAFKA_EVENT_READER_COMPONENT_ID,
-				new KafkaSpoutWrapper(config.getKafkaSubscriberSpoutConfig(), String.class, String.class).getKafkaSpout(), config.getKafkaSpoutHints());
+				new KafkaSpoutWrapper(config.getKafkaSubscriberSpoutConfig(), String.class, String.class).getKafkaSpout(), kafkaSpoutHints);
 
 		// Parse the events and we send it to the rest of the topology
 		GBolt<?> kafkaEventProcess = new GRichBolt(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID,

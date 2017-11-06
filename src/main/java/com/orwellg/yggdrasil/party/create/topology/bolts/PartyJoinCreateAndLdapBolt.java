@@ -79,7 +79,7 @@ public class PartyJoinCreateAndLdapBolt extends JoinFutureBolt<Party> {
 
 		String logPreffix = String.format("[Key: %s][ProcessId: %s] ", key, processId);
 
-		LOG.debug("{}Processing key {}, eventData {}", logPreffix, key, eventData);
+		LOG.info("{}Processing key {}, eventData {}", logPreffix, key, eventData);
 
 		try {
 			MariaDbManager man = MariaDbManager.getInstance();
@@ -113,45 +113,35 @@ public class PartyJoinCreateAndLdapBolt extends JoinFutureBolt<Party> {
 				}
 			}, UnserializableFactory.getExecutor(boltId));
 
-			if (createFut != null && ldapFut != null) {
+			// Wait and return when all done.
+			createFut.get();
+			ldapFut.get();
 
-				createFut.thenAcceptBothAsync(ldapFut, (createResult, ldapResult) -> {
+			LOG.info("{}Starting the join for key {}", logPreffix, key);
 
-					LOG.debug("{}Starting the join for key {}", logPreffix, key);
+			String result;
+			String stream;
+			String eventName;
+			stream = getEventSuccessStream();
+			eventName = PartyEvents.CREATE_PARTY_COMPLETE.getEventName();
+			// result = RawMessageUtils.encodeToString(PartyType.SCHEMA$,
+			// eventData.getParty());
+			result = gson.toJson(eventData.getParty());
 
-					String result;
-					String stream;
-					String eventName;
-					if ((createResult == null && ldapResult == null)
-							|| (!createResult.getSuccess() || !ldapResult.getSuccess())) {
-						stream = getEventErrorStream();
-						eventName = PartyEvents.CREATE_PARTY_ERROR.getEventName();
-						result = String.format("Futures did not return both correct results: {}, {}.", createResult,
-								ldapResult);
-					} else {
-						stream = getEventSuccessStream();
-						eventName = PartyEvents.CREATE_PARTY_COMPLETE.getEventName();
-						// result = RawMessageUtils.encodeToString(PartyType.SCHEMA$,
-						// eventData.getParty());
-						result = gson.toJson(eventData.getParty());
-					}
+			LOG.debug("{}Creating event {} to send to Kafka topic.", logPreffix, eventName);
+			Map<String, Object> values = new HashMap<>();
+			values.put("key", key);
+			values.put("processId", processId);
+			values.put("eventName", eventName);
+			// values.put("eventData", eventData);
+			values.put("result", result);
 
-					LOG.debug("{}Creating event {} to send to Kafka topic.", logPreffix, eventName);
-					Map<String, Object> values = new HashMap<>();
-					values.put("key", key);
-					values.put("processId", processId);
-					values.put("eventName", eventName);
-					// values.put("eventData", eventData);
-					values.put("result", result);
+			send(stream, input, values);
+			// Values tuple = new Values(key, processId, eventName, result);
+			// getCollector().emit(input, tuple);
+			// getCollector().ack(input);
 
-					send(stream, input, values);
-					// Values tuple = new Values(key, processId, eventName, result);
-					// getCollector().emit(input, tuple);
-					// getCollector().ack(input);
-
-					LOG.debug("{}End processing the join validator for key {}", logPreffix, key);
-				}, UnserializableFactory.getExecutor(boltId));
-			}
+			LOG.debug("{}End processing the join validator for key {}", logPreffix, key);
 		} catch (Exception e) {
 			LOG.error("{} Error processing the account validation. Message: {},", logPreffix, e.getMessage(), e);
 			error(e, input);
