@@ -86,7 +86,7 @@
 			<groupId>org.apache.storm</groupId>
 			<artifactId>storm-core</artifactId>
 			<version>${storm.version}</version>
-			<scope>provided</scope>
+			<scope>${storm.core.scope}</scope>
 			<exclusions>
 				<exclusion>
 					<groupId>org.slf4j</groupId>
@@ -388,6 +388,7 @@
 			</activation>
 			<properties>
 				<zookeeper.host>localhost:2181</zookeeper.host>
+				<storm.core.scope>compile</storm.core.scope>
 				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host" 
 					property: <kafka.bootstrap.host>localhost:9092,localhost:10092</kafka.bootstrap.host> -->
 				<!-- Specifies the build.profile.id property that must be equal than 
@@ -406,6 +407,7 @@
 			<id>integration-test</id>
 			<properties>
 				<zookeeper.host>localhost:2181</zookeeper.host>
+				<storm.core.scope>compile</storm.core.scope>
 				<!-- Specifies the build.profile.id property that must be equal than 
 					the name of the directory that contains the profile specific configuration 
 					file. Because the name of the directory that contains the configuration file 
@@ -423,6 +425,7 @@
 			<id>integration</id>
 			<properties>
 				<zookeeper.host>hdf-node1:2181</zookeeper.host>
+				<storm.core.scope>provided</storm.core.scope>
 				<!-- Not used, now this value is read from zookeeper "/com/orwellg/yggdrasil/topologies-defaults/kafka-bootstrap-host" 
 					property: <kafka.bootstrap.host>hdf-node1:6667,hdf-node4:6667,hdf-node5:6667</kafka.bootstrap.host> -->
 				<skip.integration.tests>true</skip.integration.tests>

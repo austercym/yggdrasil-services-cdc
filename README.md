@@ -44,6 +44,11 @@ mvn clean verify -P integration-test (for integration tests)
 mvn clean install -P integration (for "integration" environment, eg: to be deployed in OVH test; does not execute tests)
 ```
 
+## Run manually in local cluster
+
+```sh
+java -cp target/yggdrasil-party-create-0.0.1-SNAPSHOT-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.topology.CreatePartyTopology local
+```
 
 ## Upload to storm cluster in OVH test environment:
 
@@ -62,5 +67,5 @@ storm jar <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.to
 With a previously deployed topology:
 
 ```sh
-java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.csv.PartyCsvLoader
+java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.csv.PartyCsvLoader <kafka-bootstrap-server>:9092
 ```
