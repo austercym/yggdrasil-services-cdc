@@ -15,6 +15,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.orwellg.umbrella.commons.config.params.LdapParams;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
@@ -172,12 +173,12 @@ public class TopologyConfigWithLdapIT {
 		LOG.info("zookeeperHosts = {}", zookeeperHosts);
 		////////////
 		// And LDAP PROPERTIES in TopologyConfig.LdapConfig:
-		assertEquals("ldap://ec2-35-176-201-54.eu-west-2.compute.amazonaws.com:389",
+		assertEquals(LdapParams.URL_DEFAULT,
 				conf.getLdapConfig().getLdapParams().getUrl());
-		assertEquals("cn=admin,dc=ec2-35-176-201-54,dc=eu-west-2,dc=compute,dc=amazonaws,dc=com",
+		assertEquals(LdapParams.ADMIN_DN_DEFAULT,
 				conf.getLdapConfig().getLdapParams().getAdminDn());
-		assertEquals("Password123$", conf.getLdapConfig().getLdapParams().getAdminPwd());
-		assertEquals("ou=Users,dc=ec2-35-176-201-54,dc=eu-west-2,dc=compute,dc=amazonaws,dc=com",
+		assertEquals(LdapParams.ADMIN_PWD_DEFAULT, conf.getLdapConfig().getLdapParams().getAdminPwd());
+		assertEquals(LdapParams.USERS_GROUP_DN_DEFAULT,
 				conf.getLdapConfig().getLdapParams().getUsersGroupDn());
 	}
 
