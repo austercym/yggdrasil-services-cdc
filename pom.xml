@@ -432,5 +432,15 @@
 				<skip.unit.tests>true</skip.unit.tests>
 			</properties>
 		</profile>
+		<!-- Test environment @ OVH -->
+		<profile>
+			<id>test-ovh</id>
+			<properties>
+				<zookeeper.host>10.1.0.21:2181,10.1.0.23:2181,10.1.0.24:2181</zookeeper.host>
+				<storm.core.scope>provided</storm.core.scope>
+				<skip.integration.tests>true</skip.integration.tests>
+				<skip.unit.tests>true</skip.unit.tests>
+			</properties>
+		</profile>
 	</profiles>
 </project>
