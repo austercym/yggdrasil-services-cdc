@@ -5,27 +5,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.commons.cli.CommandLine;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
@@ -52,12 +47,16 @@ import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
+import com.orwellg.umbrella.commons.utils.cli.CommandLineParserCsvLoader;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
 import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
+import com.orwellg.yggdrasil.party.create.topology.CreatePartyRequestSender;
+import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 
 public class PartyCsvLoader {
 
+	public static final String BOOTSTRAPSERVER = "localhost:9092";
 	public static final String CSV_PARTY_PERSONAL_FILENAME = "party-personal.csv";
 	public static final String CSV_PARTY_NONPERSONAL_FILENAME = "party-nonpersonal.csv";
 //	public static final String CSV_PARTY_FILENAME = "PartyCsvLoaderTest-party.csv";
@@ -65,10 +64,104 @@ public class PartyCsvLoader {
 	public final static Logger LOG = LogManager.getLogger(PartyCsvLoader.class);
 
 	protected Gson gson = new Gson();
-	
-	public PartyCsvLoader() {
+	protected CreatePartyRequestSender requestSender;
+
+	protected String csvFilename;
+	protected String bootstrapServer;
+	protected String eventToExpect;
+
+	public PartyCsvLoader() throws SQLException {
 	}
 	
+	public PartyCsvLoader(String csvFilename, String bootstrapserver, String eventToExpect) {
+		this.csvFilename = csvFilename;
+		this.bootstrapServer = bootstrapserver;
+		this.eventToExpect = eventToExpect;
+	}
+
+	/**
+	 * Load party hierarchy and related entities from CSV, send to topologies, wait responses.
+	 * @param args
+	 * @throws Exception 
+	 */
+	public static void main(String[] args) throws Exception {
+		PartyCsvLoader csvLoader = new PartyCsvLoader();
+
+		CommandLineParserCsvLoader cli = new CommandLineParserCsvLoader();
+		cli.parseCommandLineArguments(args);
+		csvLoader.configFromCommandLineArguments(cli);
+		
+		if (cli.getCmd().hasOption("help")) {
+			return;
+		}
+
+		csvLoader.loadCsvAndSendToKafka();
+	}
+
+	public void loadCsvAndSendToKafka() throws IOException, SQLException {
+		TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig();
+		requestSender = new CreatePartyRequestSender(MariaDbManager.getInstance().getConnection());
+
+		int maxRetries = 120;
+		int interval = 1000;
+		
+		KafkaConsumer<String, String> consumer = requestSender.makeConsumer(bootstrapServer);
+		String partyResponseTopic = config.getKafkaPublisherBoltConfig().getTopic().getName().get(0);
+
+		consumer.subscribe(Arrays.asList(partyResponseTopic));
+		
+		if (csvFilename == null) {
+
+			/////////////
+			// PERSONAL PARTY
+			{
+				List<Event> events = csvToKafkaParty(CSV_PARTY_PERSONAL_FILENAME, bootstrapServer);
+				// Wait until topology finish process of all events
+				LOG.info("{} PersonalParty events sent to topology. Checking processing of all events...", events.size());
+				if (eventToExpect != null) {
+					Map<String, Event> responses = requestSender.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, eventToExpect);
+					LOG.info("PersonalParty work finished; {} elements processed by topology.", responses.size()); 
+				} else {
+					LOG.info("eventToExpect null, so will not check topology responses, only DB insertions.");
+					List<PartyType> processedElements = requestSender.waitAndGetInDbAllElements(events, maxRetries, interval);
+					LOG.info("PersonalParty work finished; {} elements processed by topology.", processedElements.size()); 
+				}
+			}
+
+			/////////////
+			// NONPERSONAL PARTY
+			{
+				List<Event> events = csvToKafkaParty(CSV_PARTY_NONPERSONAL_FILENAME, bootstrapServer);
+				// Wait until topology finish process all events
+				LOG.info("{} NonPersonalParty events sent to topology. Checking response to all events...", events.size());
+				if (eventToExpect != null) {
+					Map<String, Event> responses = requestSender.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, eventToExpect);
+					LOG.info("NonPersonalParty work finished; {} elements processed by topology.", responses.size()); 
+				} else {
+					LOG.info("eventToExpect null, so will not check topology responses, only DB insertions.");
+					List<PartyType> processedElements = requestSender.waitAndGetInDbAllElements(events, maxRetries, interval);
+					LOG.info("NonPersonalParty work finished; {} elements processed by topology.", processedElements.size()); 
+				}
+			}
+
+		} else {
+			
+			List<Event> events = csvToKafkaParty(csvFilename, bootstrapServer);
+			// Wait until topology finish process all events
+			LOG.info("{} Party events sent to topology from csvFilename = {}. Checking response to all events...",
+					events.size(), csvFilename);
+			if (eventToExpect != null) {
+				Map<String, Event> responses = requestSender.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, eventToExpect);
+				LOG.info("PartyCsvLoader work finished; {} elements processed by topology.", responses.size()); 
+			} else {
+				LOG.info("eventToExpect null, so will not check topology responses, only DB insertions.");
+				List<PartyType> processedElements = requestSender.waitAndGetInDbAllElements(events, maxRetries, interval);
+				LOG.info("PartyCsvLoader work finished; {} elements processed by topology.", processedElements.size()); 
+			}
+			
+		}
+	}
+
 	public List<PartyType> loadCsvParty(Reader in) throws IOException {
 		// Reader in = new FileReader("path/to/file.csv");
 		Iterable<CSVRecord> records = CSVFormat.EXCEL.withDelimiter(';').withFirstRecordAsHeader().parse(in);
@@ -132,9 +225,9 @@ public class PartyCsvLoader {
 		return l;
 	}
 	
-	public void sendToKafkaParty(String bootstrapServer, List<Event> events) {
+	public void sendToKafkaParty(String bootstrapServer, List<Event> events) throws SQLException {
 		String topic = TopologyConfigWithLdapFactory.getTopologyConfig().getKafkaSubscriberSpoutConfig().getTopic().getName().get(0);
-		Producer<String, String> producer = makeProducer(bootstrapServer);
+		Producer<String, String> producer = requestSender.makeProducer(bootstrapServer);
 		for (Iterator<Event> iterator = events.iterator(); iterator.hasNext();) {
 			Event event = iterator.next();
 			String base64Event = Base64.encodeBase64String(RawMessageUtils.encode(Event.SCHEMA$, event).array());
@@ -148,48 +241,17 @@ public class PartyCsvLoader {
 		producer.close();
 	}
 
-	public Producer<String, String> makeProducer(String bootstrapServer) {
-		// Using kafka-clients library:
-		// https://kafka.apache.org/0110/javadoc/index.html?org/apache/kafka/clients/producer/KafkaProducer.html
-		Properties propsP = new Properties();
-		propsP.put("bootstrap.servers", bootstrapServer);
-		// props.put("bootstrap.servers", "172.31.17.121:6667");
-		propsP.put("acks", "all");
-		propsP.put("retries", 0);
-		propsP.put("batch.size", 16384);
-		propsP.put("linger.ms", 1);
-		propsP.put("buffer.memory", 33554432);
-		propsP.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-		propsP.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-		Producer<String, String> producer = new KafkaProducer<>(propsP);
-		return producer;
-	}
-
-	public KafkaConsumer<String, String> makeConsumer(String bootstrapServer) {
-		Properties propsC = new Properties();
-		propsC.put("bootstrap.servers", bootstrapServer);
-		propsC.put("acks", "all");
-		propsC.put("retries", 0);
-		propsC.put("batch.size", 16384);
-		propsC.put("linger.ms", 1);
-		propsC.put("buffer.memory", 33554432);
-		propsC.put("group.id", "test");
-		propsC.put("enable.auto.commit", "true");
-		propsC.put("auto.commit.interval.ms", "1000");
-		propsC.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-		propsC.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-		KafkaConsumer<String, String> consumer = new KafkaConsumer<>(propsC);
-		return consumer;
-	}
-	
 	/**
 	 * 
 	 * @param partyCsvFilename
 	 * @param bootstrapServer
 	 * @return List of events sent
 	 * @throws IOException
+	 * @throws SQLException 
 	 */
-	public List<Event> csvToKafkaParty(String partyCsvFilename, String bootstrapServer) throws IOException {
+	public List<Event> csvToKafkaParty(String partyCsvFilename, String bootstrapServer) throws IOException, SQLException {
+		LOG.info("Loading csvFilename = {}", partyCsvFilename);
+
 		// CSV file with Parties
 		InputStream csvStream = PartyCsvLoader.class.getClassLoader().getResourceAsStream(partyCsvFilename);
 		if (csvStream == null) {
@@ -209,104 +271,6 @@ public class PartyCsvLoader {
 		sendToKafkaParty(bootstrapServer, events);
 		
 		return events;
-	}
-
-	/**
-	 * Load party hierarchy and related entities from CSV, send to topologies, wait responses.
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		String bootstrapServer;
-		if (args.length >= 1) {
-			bootstrapServer = args[0];
-			LOG.info("bootstrapServer argument received = {}", bootstrapServer);
-		} else {
-			bootstrapServer = "localhost:9092";
-			LOG.info("You could pass bootstrapServer argument.");
-			LOG.info("Using bootstrapServer = {}", bootstrapServer);
-		}
-		
-		try {
-			// Get (and init if they weren't before) party-storm application-wide params. Tries to connect to zookeeper:
-			TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig();
-
-			PartyCsvLoader pcl = new PartyCsvLoader();
-
-			int maxRetries = 120;
-			int interval = 1000;
-			
-			KafkaConsumer<String, String> consumer = pcl.makeConsumer(bootstrapServer);
-			String partyResponseTopic = config.getKafkaPublisherBoltConfig().getTopic().getName().get(0);
-
-			consumer.subscribe(Arrays.asList(partyResponseTopic));
-			
-			/////////////
-			// PERSONAL PARTY
-			{
-				List<Event> events = pcl.csvToKafkaParty(CSV_PARTY_PERSONAL_FILENAME, bootstrapServer);
-				// Wait for result responses to all events
-				// Check if PartyTopology returns kafka PartyCreated result event
-				LOG.info("{} PersonalParty events sent to topology. Checking response to all events...", events.size());
-				pcl.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, PartyEvents.CREATE_PARTY_COMPLETE.getEventName());
-			}
-
-			/////////////
-			// NONPERSONAL PARTY
-			{
-				List<Event> events = pcl.csvToKafkaParty(CSV_PARTY_NONPERSONAL_FILENAME, bootstrapServer);
-				// Wait for result responses to all events
-				// Check if PartyTopology returns kafka PartyCreated result event
-				LOG.info("{} NonPersonalParty events sent to topology. Checking response to all events...", events.size());
-				pcl.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, PartyEvents.CREATE_PARTY_COMPLETE.getEventName());
-			}
-
-//			/////////////
-//			// IPR
-//			String iprResponseTopic = "ipr.create.result.1";
-//			{
-//				// Load csv and send events to topic
-//				IPRCsvLoader iprCsvLoader = new IPRCsvLoader();
-//				String topic = "ipr.create.event.1";
-//				List<Event> events = iprCsvLoader.csvToKafka(IPRCsvLoader.CSV_IPR_FILENAME, bootstrapServer, topic);
-//				// Wait for result responses to all events
-//				// Check if topology returns kafka created result event
-//				LOG.info("{} IPR events sent to topology. Checking response to all events...", events.size());
-//				consumer.subscribe(Arrays.asList(iprResponseTopic));
-//				pcl.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, PartyEvents.CREATE_IPR_COMPLETE.getEventName());
-//			}
-//			
-//			/////////////
-//			// CONTRACT
-//			String contractResponseTopic = "contract.create.result.1";
-//			{
-//				// Load csv and send events to topic
-//				ContractCsvLoader iprCsvLoader = new ContractCsvLoader();
-//				List<Event> events = iprCsvLoader.csvToKafkaContract(ContractCsvLoader.CSV_CONTRACT_FILENAME, 
-//						bootstrapServer);
-//				// Wait for result responses to all events
-//				// Check if topology returns kafka created result event
-//				LOG.info("{} Contract events sent to topology. Checking response to all events...", events.size());
-//				consumer.subscribe(Arrays.asList(contractResponseTopic));
-//				pcl.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, ContractEvents.CREATE_CONTRACT_COMPLETE.getEventName());
-//			}
-//
-//			/////////////
-//			// PARTYCONTRACT
-//			String partyContractResponseTopic = "partycontract.create.result.1";
-//			{
-//				// Load csv and send events to topic
-//				PartyContractCsvLoader pcCsvLoader = new PartyContractCsvLoader();
-//				List<Event> events = pcCsvLoader.csvToKafkaPartyContract(PartyContractCsvLoader.CSV_PARTYCONTRACT_FILENAME, 
-//						bootstrapServer);
-//				// Wait for result responses to all events
-//				// Check if topology returns kafka created result event
-//				LOG.info("{} Contract events sent to topology. Checking response to all events...", events.size());
-//				consumer.subscribe(Arrays.asList(partyContractResponseTopic));
-//				pcl.waitAndConsumeAllResponses(events, maxRetries, interval, consumer, ContractEvents.CREATE_PARTYCONTRACT_COMPLETE.getEventName());
-//			}
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-		}
 	}
 
 	public List<Event> generateEventList(String parentKey, String eventName, List<PartyType> partiesNP) {
@@ -376,55 +340,35 @@ public class PartyCsvLoader {
 	}
 
 	/**
-	 * 
-	 * @param originEvents
-	 * @param maxRetries
-	 * @param interval
-	 * @param consumer
-	 * @return Map (parentKey, responseEvent)
+	 * Configure this object from command-line arguments
 	 */
-	public Map<String, Event> waitAndConsumeAllResponses(List<Event> originEvents, int maxRetries, int interval,
-			KafkaConsumer<String, String> consumer, String eventToExpect) {
-		
-		// parentKeys are originEvents keys
-		Set<String> parentKeys = new HashSet<>();
-		for (Iterator<Event> iterator = originEvents.iterator(); iterator.hasNext();) {
-			Event originEvent = (Event) iterator.next();
-			parentKeys.add(originEvent.getEvent().getKey());
+	protected void configFromCommandLineArguments(CommandLineParserCsvLoader cli) {
+		CommandLine cmd = cli.getCmd();
+
+		if (cmd.hasOption(cli.getBootstrapserverOpt().getLongOpt())) {
+			bootstrapServer = cmd.getOptionValue(cli.getBootstrapserverOpt().getLongOpt());
+			LOG.info("bootstrapServer argument received = {}", bootstrapServer);
+		} else {
+			bootstrapServer = BOOTSTRAPSERVER;
+			LOG.info("You could pass -b <bootstrapserver> argument.");
+			LOG.info("Using default bootstrapServer = {}", bootstrapServer);
 		}
-		
-		// parentKey, event
-		Map<String, Event> parentKeyAndResponseEvents = new HashMap<>();
-		
-		// Consume responses until all matched or maxRetries
-		int retries = 0;
-		int matchedResponses = 0;
-		while (matchedResponses < parentKeys.size() && retries < maxRetries) {
-			LOG.info("consumer polling topic {}...", consumer.subscription());
-			ConsumerRecords<String, String> records = consumer.poll(100);
-			if (records.isEmpty()) {
-				retries++;
-				LOG.info("empty records polled, retry {}...", retries);
-				try {
-					Thread.sleep(interval);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-			for (ConsumerRecord<String, String> record : records) {
-				Event responseEvent = RawMessageUtils.decode(Event.SCHEMA$, Base64.decodeBase64(record.value()));
-				LOG.info("responseEvent data with parentKey {} found = {}", responseEvent.getEvent().getParentKey(), responseEvent);
-				// Check if eventKeyId of the request matches the parent of the response
-				if (parentKeys.contains(responseEvent.getEvent().getParentKey()) && responseEvent.getEvent().getName().equals(eventToExpect)) {
-					parentKeyAndResponseEvents.put(responseEvent.getEvent().getParentKey(), responseEvent);
-					LOG.info("responseEvent data with parentKey {} matched.", responseEvent.getEvent().getParentKey());
-					matchedResponses++;
-				} else {
-					LOG.info("responseEvent data with parentKey {} NOT matched = {}.", responseEvent.getEvent().getParentKey(), responseEvent);
-				}
-			}
+
+		if (cmd.hasOption(cli.getCsvFileOpt().getLongOpt())) {
+			csvFilename = cmd.getOptionValue(cli.getCsvFileOpt().getLongOpt());
+			LOG.info("csvFilename argument received = {}", csvFilename);
+		} else {
+			LOG.info("You could pass -c <csvFilename> argument.");
+			csvFilename = null;
+			LOG.info("Using csvFilename = {}", csvFilename);
 		}
-		
-		return parentKeyAndResponseEvents;
+
+		if (cmd.hasOption("n")) {
+			LOG.info("\"-n\" argument received, not checking if response event is correct or incorrect.");
+			eventToExpect = null;
+		} else {
+			LOG.info("You could pass \"-n\" as second argument not to check if response event is correct or incorrect.");
+			eventToExpect = PartyEvents.CREATE_PARTY_COMPLETE.getEventName();
+		}
 	}
 }

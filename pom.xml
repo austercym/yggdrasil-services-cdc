@@ -11,9 +11,10 @@
 	<url>http://maven.apache.org</url>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
 		<casandra.version>3.3.0</casandra.version>
 		<storm.version>1.1.0</storm.version>
@@ -35,7 +36,7 @@
 
 		<curator.version>2.3.0</curator.version>
 
-		<storm.topology>com.orwellg.yggdrasil.dsl.product.topology.ProductDSLTopology</storm.topology>
+		<storm.topology>com.orwellg.yggdrasil.party.create.topology.CreatePartyTopology</storm.topology>
 	</properties>
 
 	<repositories>
@@ -56,7 +57,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>com.orwellg.yggdrasil.dsl.product.topology.ProductDSLTopology</mainClass>
+							<mainClass>${storm.topology}</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
@@ -193,6 +194,26 @@
 	</build>
 
 	<dependencies>
+		<!-- Explicitly specify version of guava and curator. curator-client 2.3 needs guava 14.x that is
+			incompatible with newer versions of guava that are needed by cassandra-driver-core -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>14.0.1</version>
+		</dependency>
+		<!-- Explicitly specify version of guava and curator. curator-client 2.3 needs guava 14.x that is
+			incompatible with newer versions of guava that are needed by cassandra-driver-core -->
+		<dependency>
+			<groupId>org.apache.curator</groupId>
+			<artifactId>curator-recipes</artifactId>
+			<version>${curator.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.zookeeper</groupId>
+					<artifactId>zookeeper</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
 
 		<!-- UMBRELLA COMMONS dependencies -->
 		<dependency>
@@ -237,7 +258,7 @@
 			<groupId>org.apache.storm</groupId>
 			<artifactId>storm-core</artifactId>
 			<version>${storm.version}</version>
-			<scope>provided</scope>
+			<scope>${storm.core.scope}</scope>
 			<exclusions>
 				<exclusion>
 					<groupId>org.slf4j</groupId>
@@ -420,7 +441,12 @@
 			<artifactId>commons-logging</artifactId>
 			<version>1.1.1</version>
 		</dependency>
-
+		<!-- Parse command-line arguments in CsvLoader -->
+		<dependency>
+			<groupId>commons-cli</groupId>
+			<artifactId>commons-cli</artifactId>
+			<version>1.4</version>
+		</dependency>
 
 	</dependencies>
 
@@ -435,6 +461,7 @@
 			<properties>
 				<zookeeper.host>localhost:2181</zookeeper.host>
 				<kafka.bootstrap.host>localhost:9092,localhost:10092</kafka.bootstrap.host>
+				<storm.core.scope>compile</storm.core.scope>
 				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig, 
 					MariaDBParams): <mariab.host>localhost</mariab.host> <mariab.port>3306</mariab.port> 
 					<mariab.dbName>ipagoo</mariab.dbName> <mariab.user>ipagoo</mariab.user> <mariab.password>tempo.99</mariab.password> -->
@@ -448,6 +475,7 @@
 			<properties>
 				<zookeeper.host>hdf-node1:2181</zookeeper.host>
 				<kafka.bootstrap.host>hdf-node1:6667,hdf-node4:6667,hdf-node5:6667</kafka.bootstrap.host>
+				<storm.core.scope>compile</storm.core.scope>
 				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig, 
 					MariaDBParams): <mariab.host>217.182.88.190</mariab.host> <mariab.port>3306</mariab.port> 
 					<mariab.dbName>IPAGOO_Customer_DB_TEST</mariab.dbName> <mariab.user>root</mariab.user> 
@@ -459,13 +487,14 @@
 		<profile>
 			<id>integration-test</id>
 			<properties>
-				<zookeeper.host>127.0.0.1:2181</zookeeper.host>
+				<zookeeper.host>localhost:2181</zookeeper.host>
 				<!-- Specifies the build.profile.id property that must be equal than 
 					the name of the directory that contains the profile specific configuration 
 					file. Because the name of the directory that contains the configuration file 
 					of the integration-test profile is integration-test, we must set the value 
 					of the build.profile.id property to integration-test. -->
 				<build.profile.id>integration-test</build.profile.id>
+				<storm.core.scope>provided</storm.core.scope>
 				<!-- Only integration tests are run when the integration-test profile 
 					is active -->
 				<skip.integration.tests>false</skip.integration.tests>
@@ -477,6 +506,7 @@
 			<id>test-ovh</id>
 			<properties>
 				<zookeeper.host>10.1.0.21:2181,10.1.0.23:2181,10.1.0.24:2181</zookeeper.host>
+				<storm.core.scope>provided</storm.core.scope>
 				<skip.integration.tests>true</skip.integration.tests>
 				<skip.unit.tests>true</skip.unit.tests>
 			</properties>

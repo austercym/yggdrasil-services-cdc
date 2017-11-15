@@ -94,6 +94,10 @@ public class CreatePartyTopology {
 		loadTopologyInStorm(null);
 	}
 
+	public static void loadTopologyInStorm(LocalCluster localCluster) throws Exception {
+		loadTopologyInStorm(localCluster, null);
+	}
+
 	/**
 	 * Set up Party topology and load into storm.<br/>
 	 * It may take some 2min to execute synchronously, then another some 2min to
@@ -104,12 +108,12 @@ public class CreatePartyTopology {
 	 * @param localCluster
 	 *            null to submit to remote cluster.
 	 */
-	public static void loadTopologyInStorm(LocalCluster localCluster) throws Exception {
+	public static void loadTopologyInStorm(LocalCluster localCluster, Config conf) throws Exception {
 		LOG.info("Creating {} topology...", TOPOLOGY_NAME);
 
 		// Read configuration params from topology.properties and zookeeper
 		TopologyConfig config = TopologyConfigWithLdapFactory.getTopologyConfig();
-
+		
 		// Create the spout that read the events from Kafka
 		Integer kafkaSpoutHints = config.getKafkaSpoutHints();
 		LOG.info("kafkaSpoutHints = {}", kafkaSpoutHints);
@@ -173,10 +177,12 @@ public class CreatePartyTopology {
 		LOG.info("Party Topology created, submitting it to storm...");
 
 		// Create the basic config and upload the topology
-		Config conf = new Config();
-		conf.setDebug(false);
-		conf.setMaxTaskParallelism(config.getTopologyMaxTaskParallelism());
-		conf.setNumWorkers(config.getTopologyNumWorkers());
+		if (conf == null) {
+			conf = new Config();
+			conf.setDebug(false);
+			conf.setMaxTaskParallelism(config.getTopologyMaxTaskParallelism());
+			conf.setNumWorkers(config.getTopologyNumWorkers());
+		}
 
 		if (localCluster != null) {
 			// LocalCluster cluster = new LocalCluster();
