@@ -17,12 +17,9 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -46,7 +43,6 @@ import com.orwellg.umbrella.avro.types.party.PartyQuestionaireType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
-import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
 import com.orwellg.umbrella.commons.utils.cli.CommandLineParserCsvLoader;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
 import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
@@ -70,7 +66,7 @@ public class PartyCsvLoader {
 	protected String bootstrapServer;
 	protected String eventToExpect;
 
-	public PartyCsvLoader() throws SQLException {
+	public PartyCsvLoader() {
 	}
 	
 	public PartyCsvLoader(String csvFilename, String bootstrapserver, String eventToExpect) {
@@ -225,22 +221,6 @@ public class PartyCsvLoader {
 		return l;
 	}
 	
-	public void sendToKafkaParty(String bootstrapServer, List<Event> events) throws SQLException {
-		String topic = TopologyConfigWithLdapFactory.getTopologyConfig().getKafkaSubscriberSpoutConfig().getTopic().getName().get(0);
-		Producer<String, String> producer = requestSender.makeProducer(bootstrapServer);
-		for (Iterator<Event> iterator = events.iterator(); iterator.hasNext();) {
-			Event event = iterator.next();
-			String base64Event = Base64.encodeBase64String(RawMessageUtils.encode(Event.SCHEMA$, event).array());
-			
-			// Write CreateParty event to "party.action.event.1" kafka topic.
-			LOG.debug("Sending event {} to topic {}...", event, topic);
-			producer.send(new ProducerRecord<String, String>(topic, base64Event));
-			LOG.debug("Event {} sent to topic {}.", event, topic);
-		}
-		LOG.info("{} events sent to topic {}.", events.size(), topic);
-		producer.close();
-	}
-
 	/**
 	 * 
 	 * @param partyCsvFilename
@@ -268,7 +248,7 @@ public class PartyCsvLoader {
 		List<Event> events = generateEventList(parentKey, eventName, parties);
 		
 		// Send events to kafka topic "party.action.event.1"
-		sendToKafkaParty(bootstrapServer, events);
+		requestSender.sendToKafka(bootstrapServer, events);
 		
 		return events;
 	}

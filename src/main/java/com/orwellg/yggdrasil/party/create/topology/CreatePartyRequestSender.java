@@ -28,23 +28,23 @@ import org.apache.logging.log4j.Logger;
 import org.lable.oss.uniqueid.GeneratorException;
 
 import com.google.gson.Gson;
-import com.orwellg.umbrella.avro.types.commons.IDItem;
-import com.orwellg.umbrella.avro.types.commons.ProductIDList;
-import com.orwellg.umbrella.avro.types.contract.ContractIdType;
-import com.orwellg.umbrella.avro.types.contract.ContractType;
 import com.orwellg.umbrella.avro.types.event.EntityIdentifierType;
 import com.orwellg.umbrella.avro.types.event.Event;
 import com.orwellg.umbrella.avro.types.event.EventType;
 import com.orwellg.umbrella.avro.types.event.ProcessIdentifierType;
+import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
+import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetails;
 import com.orwellg.umbrella.commons.repositories.mariadb.impl.PartyDAO;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.party.Party;
 import com.orwellg.umbrella.commons.types.utils.avro.RawMessageUtils;
 import com.orwellg.umbrella.commons.utils.constants.Constants;
-import com.orwellg.umbrella.commons.utils.enums.ContractEvents;
+import com.orwellg.umbrella.commons.utils.enums.PartyEvents;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
+import com.orwellg.yggdrasil.party.config.TopologyConfigWithLdapFactory;
 import com.orwellg.yggdrasil.party.dao.MariaDbManager;
 
 public class CreatePartyRequestSender {
@@ -61,8 +61,8 @@ public class CreatePartyRequestSender {
 	}
 
 	/**
-	 * Test an already loaded topology by sending a CreateContract event to kafka
-	 * topic, and wait for ContractCreated response.<br/>
+	 * Test an already loaded topology by sending a Create event to kafka
+	 * topic, and wait for Created response.<br/>
 	 * Pre: topology already loaded in storm.
 	 * 
 	 * @throws SQLException
@@ -81,10 +81,10 @@ public class CreatePartyRequestSender {
 		consumer.subscribe(Arrays.asList(responseTopic));
 		
 		// Generate many elements to be created
-		List<ContractType> elements = generateContractsToCreate(numElements);
+		List<PartyType> elements = generateElementsToCreate(numElements);
 		// Generate many events
 		String parentKey = this.getClass().getSimpleName();
-		String eventName = ContractEvents.CREATE_CONTRACT.getEventName();
+		String eventName = PartyEvents.CREATE_PARTY.getEventName();
 		List<Event> events = generateRequestEvents(parentKey, eventName, elements);
 		
 		// Send events
@@ -96,7 +96,7 @@ public class CreatePartyRequestSender {
 		int interval = 1000;
 		String eventToExpect;
 		if (failIfWrong) {
-			eventToExpect = ContractEvents.CREATE_CONTRACT_COMPLETE.getEventName();
+			eventToExpect = PartyEvents.CREATE_PARTY_COMPLETE.getEventName();
 			Map<String, Event> matchedResponseEvents = waitAndConsumeAllResponses(events, maxRetries, interval, consumer,
 					eventToExpect);
 			if (events.size() != matchedResponseEvents.size()) {
@@ -139,16 +139,20 @@ public class CreatePartyRequestSender {
 		LOG.info("{} events sent to topic {}.", events.size(), topic);
 	}
 
-	protected List<ContractType> generateContractsToCreate(int numElements) throws IOException, GeneratorException {
-		ArrayList<ContractType> l = new ArrayList<>(numElements);
+	protected List<PartyType> generateElementsToCreate(int numElements) throws IOException, GeneratorException {
+		ArrayList<PartyType> l = new ArrayList<>(numElements);
 		for (int i = 0; i < numElements; i++) {
-			ContractType t1 = new ContractType();
-			t1.setId(new ContractIdType(idGen.generateLocalUniqueIDStr()));
-			ProductIDList products = new ProductIDList();
-			products.setProductIDs(Arrays.asList(new IDItem(idGen.generateLocalUniqueIDStr())));
-			t1.setContractProducts(products);
+			PartyType pt = new PartyType();
+			// Do not set ID here, then the topology will create and return it:
+			pt.setId(null);
+			pt.setFirstName("FirstName");
+			PartyPersonalDetailsType persDet = new PartyPersonalDetailsType();
+			PPEmploymentDetailType empDet = new PPEmploymentDetailType();
+			empDet.setJobTitle("job title");
+			persDet.setEmploymentDetails(new PPEmploymentDetails(empDet));
+			pt.setPersonalDetails(persDet);
 			
-			l.add(t1);
+			l.add(pt);
 		}
 		return l;
 	}
@@ -187,11 +191,11 @@ public class CreatePartyRequestSender {
 		return producer;
 	}
 
-	protected List<Event> generateRequestEvents(String parentKey, String eventName, List<ContractType> elements) {
+	protected List<Event> generateRequestEvents(String parentKey, String eventName, List<PartyType> elements) {
 		// Generate Events with eventData
 		List<Event> events = new ArrayList<>();
-		for (Iterator<ContractType> iterator = elements.iterator(); iterator.hasNext();) {
-			ContractType t = iterator.next();
+		for (Iterator<PartyType> iterator = elements.iterator(); iterator.hasNext();) {
+			PartyType t = iterator.next();
 			String serializedType = gson.toJson(t);
 			String processId = "" + ThreadLocalRandom.current().nextLong(1000000);
 			String uuid = t.getId().getId();
@@ -248,6 +252,22 @@ public class CreatePartyRequestSender {
 		LOG.info("{}Event generated correctly: {}", logPreffix, event);
 
 		return event;
+	}
+
+	public void sendToKafka(String bootstrapServer, List<Event> events) throws SQLException {
+		String topic = TopologyConfigWithLdapFactory.getTopologyConfig().getKafkaSubscriberSpoutConfig().getTopic().getName().get(0);
+		Producer<String, String> producer = makeProducer(bootstrapServer);
+		for (Iterator<Event> iterator = events.iterator(); iterator.hasNext();) {
+			Event event = iterator.next();
+			String base64Event = Base64.encodeBase64String(RawMessageUtils.encode(Event.SCHEMA$, event).array());
+			
+			// Write CreateParty event to "party.action.event.1" kafka topic.
+			LOG.debug("Sending event {} to topic {}...", event, topic);
+			producer.send(new ProducerRecord<String, String>(topic, base64Event));
+			LOG.debug("Event {} sent to topic {}.", event, topic);
+		}
+		LOG.info("{} events sent to topic {}.", events.size(), topic);
+		producer.close();
 	}
 
 	public Map<String, Event> waitAndConsumeAllResponses(List<Event> originEvents, int maxRetries, int interval,
@@ -315,7 +335,7 @@ public class CreatePartyRequestSender {
 
 			if (p == null) {
 				retries++;
-				LOG.info("Contract with Id = {} not found yet, retry {} after sleeping {}s...", elementID,
+				LOG.info("Element with Id = {} not found yet, retry {} after sleeping {}s...", elementID,
 						retries, interval);
 				try {
 					Thread.sleep(interval);
