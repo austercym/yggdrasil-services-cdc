@@ -32,6 +32,7 @@ import com.orwellg.umbrella.avro.types.event.EntityIdentifierType;
 import com.orwellg.umbrella.avro.types.event.Event;
 import com.orwellg.umbrella.avro.types.event.EventType;
 import com.orwellg.umbrella.avro.types.event.ProcessIdentifierType;
+import com.orwellg.umbrella.avro.types.party.PartyIdType;
 import com.orwellg.umbrella.avro.types.party.PartyPersonalDetailsType;
 import com.orwellg.umbrella.avro.types.party.PartyType;
 import com.orwellg.umbrella.avro.types.party.personal.PPEmploymentDetailType;
@@ -143,8 +144,7 @@ public class CreatePartyRequestSender {
 		ArrayList<PartyType> l = new ArrayList<>(numElements);
 		for (int i = 0; i < numElements; i++) {
 			PartyType pt = new PartyType();
-			// Do not set ID here, then the topology will create and return it:
-			pt.setId(null);
+			pt.setId(new PartyIdType(idGen.generateLocalUniqueIDStr()));
 			pt.setFirstName("FirstName");
 			PartyPersonalDetailsType persDet = new PartyPersonalDetailsType();
 			PPEmploymentDetailType empDet = new PPEmploymentDetailType();

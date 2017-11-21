@@ -4,7 +4,7 @@
 
 	<groupId>com.orwellg</groupId>
 	<artifactId>yggdrasil-party-create</artifactId>
-	<version>0.0.2</version>
+	<version>0.0.3</version>
 	<packaging>jar</packaging>
 
 	<name>yggdrasil-party-create</name>
@@ -469,21 +469,6 @@
 				<skip.unit.tests>false</skip.unit.tests>
 			</properties>
 		</profile>
-		<!-- Integration environment @ OVH -->
-		<profile>
-			<id>integration</id>
-			<properties>
-				<zookeeper.host>hdf-node1:2181</zookeeper.host>
-				<kafka.bootstrap.host>hdf-node1:6667,hdf-node4:6667,hdf-node5:6667</kafka.bootstrap.host>
-				<storm.core.scope>compile</storm.core.scope>
-				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig, 
-					MariaDBParams): <mariab.host>217.182.88.190</mariab.host> <mariab.port>3306</mariab.port> 
-					<mariab.dbName>IPAGOO_Customer_DB_TEST</mariab.dbName> <mariab.user>root</mariab.user> 
-					<mariab.password>Tempo.99</mariab.password> -->
-				<skip.integration.tests>true</skip.integration.tests>
-				<skip.unit.tests>true</skip.unit.tests>
-			</properties>
-		</profile>
 		<profile>
 			<id>integration-test</id>
 			<properties>
@@ -494,10 +479,25 @@
 					of the integration-test profile is integration-test, we must set the value 
 					of the build.profile.id property to integration-test. -->
 				<build.profile.id>integration-test</build.profile.id>
-				<storm.core.scope>provided</storm.core.scope>
+				<storm.core.scope>compile</storm.core.scope>
 				<!-- Only integration tests are run when the integration-test profile 
 					is active -->
 				<skip.integration.tests>false</skip.integration.tests>
+				<skip.unit.tests>true</skip.unit.tests>
+			</properties>
+		</profile>
+		<!-- Integration environment @ OVH -->
+		<profile>
+			<id>integration</id>
+			<properties>
+				<zookeeper.host>hdf-node1:2181</zookeeper.host>
+				<kafka.bootstrap.host>hdf-node1:6667,hdf-node4:6667,hdf-node5:6667</kafka.bootstrap.host>
+				<storm.core.scope>provided</storm.core.scope>
+				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig, 
+					MariaDBParams): <mariab.host>217.182.88.190</mariab.host> <mariab.port>3306</mariab.port> 
+					<mariab.dbName>IPAGOO_Customer_DB_TEST</mariab.dbName> <mariab.user>root</mariab.user> 
+					<mariab.password>Tempo.99</mariab.password> -->
+				<skip.integration.tests>true</skip.integration.tests>
 				<skip.unit.tests>true</skip.unit.tests>
 			</properties>
 		</profile>
