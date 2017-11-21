@@ -62,10 +62,20 @@ Upload generated jar-with-dependencies.
 storm jar <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.topology.CreatePartyTopology -c nimbus.host=hdf-node2
 ```
 
+
+## Manually send requests to topology (for testing):
+
+With a previously deployed topology, send one or many requests and wait responses:
+
+```sh
+java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.topology.CreatePartyRequestSender 1
+```
+
 ## Manually load CSV and sent to topology (send requests to kafka topic and wait response):
 
 With a previously deployed topology:
 
 ```sh
-java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.csv.PartyCsvLoader <kafka-bootstrap-server>:9092
+java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.csv.PartyCsvLoader --help
+java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.create.csv.PartyCsvLoader --bootstrapserver=<kafka-host>:9092 -n
 ```
