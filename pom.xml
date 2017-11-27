@@ -3,11 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.orwellg</groupId>
-	<artifactId>yggdrasil-party-create</artifactId>
-	<version>0.0.3</version>
+	<artifactId>yggdrasil-party-cdc</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>yggdrasil-party-create</name>
+	<name>yggdrasil-party-cdc</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
@@ -16,7 +16,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-		<casandra.version>3.3.0</casandra.version>
+		<cassandra.version>3.3.0</cassandra.version>
 		<storm.version>1.1.0</storm.version>
 		<kafka.clients.version>0.11.0.0</kafka.clients.version>
 		<snakeyaml.version>1.18</snakeyaml.version>
@@ -29,14 +29,13 @@
 		<umbrella.version>0.0.1</umbrella.version>
 		<yggdrasil.version>0.0.1</yggdrasil.version>
 		<org.apache.codec.version>1.10</org.apache.codec.version>
-		<mariadb.version>2.1.0</mariadb.version>
 
 		<junit.version>4.12</junit.version>
 		<cucumber.version>1.2.5</cucumber.version>
 
 		<curator.version>2.3.0</curator.version>
 
-		<storm.topology>com.orwellg.yggdrasil.party.create.topology.CreatePartyTopology</storm.topology>
+		<storm.topology>com.orwellg.yggdrasil.party.cdc.topology.CDCPartyTopology</storm.topology>
 	</properties>
 
 	<repositories>
@@ -90,7 +89,7 @@
 					<mainClass>${storm.topology}</mainClass>
 				</configuration>
 			</plugin>
-			<!-- Enabling and configuring regular resources filtering. See also section 
+			<!-- Enabling and configuring regular resources filtering. See also section
 				"resources" below -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -132,8 +131,8 @@
 						<configuration>
 							<!-- Configures the resource directory of our integration tests -->
 							<resources>
-								<!-- Placeholders that are found from the files located in the configured 
-									resource directories are replaced with the property values found from the 
+								<!-- Placeholders that are found from the files located in the configured
+									resource directories are replaced with the property values found from the
 									profile specific configuration file. -->
 								<resource>
 									<filtering>true</filtering>
@@ -164,7 +163,7 @@
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<version>2.18</version>
 				<executions>
-					<!-- Invokes both the integration-test and the verify goals of the Failsafe 
+					<!-- Invokes both the integration-test and the verify goals of the Failsafe
 						Maven plugin -->
 					<execution>
 						<id>integration-tests</id>
@@ -173,7 +172,7 @@
 							<goal>verify</goal>
 						</goals>
 						<configuration>
-							<!-- Skips integration tests if the value of skip.integration.tests 
+							<!-- Skips integration tests if the value of skip.integration.tests
 								property is true -->
 							<skipTests>${skip.integration.tests}</skipTests>
 						</configuration>
@@ -194,6 +193,37 @@
 	</build>
 
 	<dependencies>
+		<!-- https://mvnrepository.com/artifact/com.datastax.cassandra/cassandra-driver-core -->
+		<dependency>
+			<groupId>com.datastax.cassandra</groupId>
+			<artifactId>cassandra-driver-core</artifactId>
+			<version>${cassandra.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		
+		<!-- Launch cassandra db server in tests -->
+		<dependency>
+			<groupId>org.cassandraunit</groupId>
+			<artifactId>cassandra-unit</artifactId>
+			<version>3.3.0.2</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>jcl-over-slf4j</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+	
 		<!-- Explicitly specify version of guava and curator. curator-client 2.3 needs guava 14.x that is
 			incompatible with newer versions of guava that are needed by cassandra-driver-core -->
 		<dependency>
@@ -360,13 +390,6 @@
 			<version>2.4.2</version>
 		</dependency>
 
-		<!-- Relational MariaDB access -->
-		<dependency>
-			<groupId>org.mariadb.jdbc</groupId>
-			<artifactId>mariadb-java-client</artifactId>
-			<version>${mariadb.version}</version>
-		</dependency>
-
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
@@ -434,7 +457,7 @@
 			<version>${curator.version}</version>
 			<scope>test</scope>
 		</dependency>
-				
+
 		<!-- https://mvnrepository.com/artifact/commons-logging/commons-logging -->
 		<dependency>
 			<groupId>commons-logging</groupId>
@@ -462,8 +485,8 @@
 				<zookeeper.host>localhost:2181</zookeeper.host>
 				<kafka.bootstrap.host>localhost:9092,localhost:10092</kafka.bootstrap.host>
 				<storm.core.scope>compile</storm.core.scope>
-				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig, 
-					MariaDBParams): <mariab.host>localhost</mariab.host> <mariab.port>3306</mariab.port> 
+				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig,
+					MariaDBParams): <mariab.host>localhost</mariab.host> <mariab.port>3306</mariab.port>
 					<mariab.dbName>ipagoo</mariab.dbName> <mariab.user>ipagoo</mariab.user> <mariab.password>tempo.99</mariab.password> -->
 				<skip.integration.tests>true</skip.integration.tests>
 				<skip.unit.tests>false</skip.unit.tests>
@@ -473,14 +496,14 @@
 			<id>integration-test</id>
 			<properties>
 				<zookeeper.host>localhost:2181</zookeeper.host>
-				<!-- Specifies the build.profile.id property that must be equal than 
-					the name of the directory that contains the profile specific configuration 
-					file. Because the name of the directory that contains the configuration file 
-					of the integration-test profile is integration-test, we must set the value 
+				<!-- Specifies the build.profile.id property that must be equal than
+					the name of the directory that contains the profile specific configuration
+					file. Because the name of the directory that contains the configuration file
+					of the integration-test profile is integration-test, we must set the value
 					of the build.profile.id property to integration-test. -->
 				<build.profile.id>integration-test</build.profile.id>
 				<storm.core.scope>compile</storm.core.scope>
-				<!-- Only integration tests are run when the integration-test profile 
+				<!-- Only integration tests are run when the integration-test profile
 					is active -->
 				<skip.integration.tests>false</skip.integration.tests>
 				<skip.unit.tests>true</skip.unit.tests>
@@ -493,9 +516,9 @@
 				<zookeeper.host>hdf-node1:2181</zookeeper.host>
 				<kafka.bootstrap.host>hdf-node1:6667,hdf-node4:6667,hdf-node5:6667</kafka.bootstrap.host>
 				<storm.core.scope>provided</storm.core.scope>
-				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig, 
-					MariaDBParams): <mariab.host>217.182.88.190</mariab.host> <mariab.port>3306</mariab.port> 
-					<mariab.dbName>IPAGOO_Customer_DB_TEST</mariab.dbName> <mariab.user>root</mariab.user> 
+				<!-- Not used, the used ones are in zookeeper, or default ones (see MariaDBConfig,
+					MariaDBParams): <mariab.host>217.182.88.190</mariab.host> <mariab.port>3306</mariab.port>
+					<mariab.dbName>IPAGOO_Customer_DB_TEST</mariab.dbName> <mariab.user>root</mariab.user>
 					<mariab.password>Tempo.99</mariab.password> -->
 				<skip.integration.tests>true</skip.integration.tests>
 				<skip.unit.tests>true</skip.unit.tests>
