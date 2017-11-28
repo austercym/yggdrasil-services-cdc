@@ -223,6 +223,13 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.modelmapper/modelmapper -->
+		<dependency>
+			<groupId>org.modelmapper</groupId>
+			<artifactId>modelmapper</artifactId>
+			<version>1.1.1</version>
+		</dependency>
 	
 		<!-- Explicitly specify version of guava and curator. curator-client 2.3 needs guava 14.x that is
 			incompatible with newer versions of guava that are needed by cassandra-driver-core -->
