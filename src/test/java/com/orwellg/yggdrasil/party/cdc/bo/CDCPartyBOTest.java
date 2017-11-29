@@ -26,6 +26,8 @@ public class CDCPartyBOTest {
 	@Rule
 	public MockitoRule mockitoRule = MockitoJUnit.rule();
 	
+	protected Gson gson = new Gson();
+	
 	@Before
 	public void setUp() {
 		Gson gson = new Gson();
@@ -42,7 +44,7 @@ public class CDCPartyBOTest {
 						+ " \"Addresses\": \"[]\", \"Party_InfoAssets\": \"\\u0000\"}";
 
 		// When parse json
-		CDCPartyChangeRecord cr = cdcPartyBo.parseChangeRecordJson(json);
+		CDCPartyChangeRecord cr = gson.fromJson(json, CDCPartyChangeRecord.class);
 		// And process cr
 		Party party = cdcPartyBo.processChangeRecord(cr);
 
@@ -65,7 +67,7 @@ public class CDCPartyBOTest {
 							+ "\"Party_InfoAssets\": \"\\u0000\"}";
 
 			// When parse json
-			CDCPartyChangeRecord cr = cdcPartyBo.parseChangeRecordJson(json);
+			CDCPartyChangeRecord cr = gson.fromJson(json, CDCPartyChangeRecord.class);
 			// And process cr
 			Party party = cdcPartyBo.processChangeRecord(cr);
 
@@ -86,7 +88,7 @@ public class CDCPartyBOTest {
 							+ "\"Addresses\": \"null\", \"Party_InfoAssets\": \"\\u0000\"}";
 
 			// When parse json
-			CDCPartyChangeRecord cr = cdcPartyBo.parseChangeRecordJson(json);
+			CDCPartyChangeRecord cr = gson.fromJson(json, CDCPartyChangeRecord.class);
 			// And process cr
 			Party party = cdcPartyBo.processChangeRecord(cr);
 
@@ -108,7 +110,7 @@ public class CDCPartyBOTest {
 				+ "\"Party_InfoAssets\": \"\\u0000\"}";
 
 		// When parse json
-		CDCPartyChangeRecord cr = cdcPartyBo.parseChangeRecordJson(json);
+		CDCPartyChangeRecord cr = gson.fromJson(json, CDCPartyChangeRecord.class);
 		// And process cr
 		Party party = cdcPartyBo.processChangeRecord(cr);
 
