@@ -47,15 +47,15 @@ public class CDCPartyTopology {
 
 	private static final String TOPOLOGY_NAME = "cdc-party";
 
-	private static final String KAFKA_EVENT_READER_COMPONENT_ID = "kafka-event-reader";
-	private static final String KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID = "create-contract-kafka-event-success-process";
-	private static final String CDC_PARTY_COMPONENT_ID = "cdc-party";
-	private static final String KAFKA_EVENT_GENERATOR_COMPONENT_ID = "create-contract-kafka-event-generator";
-	private static final String KAFKA_EVENT_PRODUCER_COMPONENT_ID = "kafka-event-producer";
-	private static final String FINAL_PROCESS_COMPONENT_ID = "create-contract-final-process";
+	private static final String KAFKA_EVENT_READER_COMPONENT_ID = "cdc-party-kafka-event-reader";
+	private static final String KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID = "cdc-party-kafka-event-success-process";
+	private static final String CDC_PARTY_COMPONENT_ID = "cdc-party-action";
+	private static final String KAFKA_EVENT_GENERATOR_COMPONENT_ID = "cdc-party-kafka-event-generator";
+	private static final String KAFKA_EVENT_PRODUCER_COMPONENT_ID = "cdc-party-kafka-event-producer";
+	private static final String FINAL_PROCESS_COMPONENT_ID = "cdc-party-final-process";
 
-	private static final String KAFKA_ERROR_PRODUCER_COMPONENT_ID = "kafka-error-producer";
-	private static final String KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID = "kafka-event-error-process";
+	private static final String KAFKA_ERROR_PRODUCER_COMPONENT_ID = "cdc-party-kafka-error-producer";
+	private static final String KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID = "cdc-party-kafka-event-error-process";
 
 	private final static Logger LOG = LogManager.getLogger(CDCPartyTopology.class);
 

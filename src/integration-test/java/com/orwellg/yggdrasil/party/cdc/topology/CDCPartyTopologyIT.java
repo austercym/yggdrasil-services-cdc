@@ -6,7 +6,6 @@ import java.sql.SQLException;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,10 +31,6 @@ public class CDCPartyTopologyIT {
 	protected String scyllaNodes = "localhost:9042";
 	protected String scyllaKeyspace = ScyllaParams.DEFAULT_SCYLA_KEYSPACE_CUSTOMER_PRODUCT_DB;
 
-//    // uses port 9142
-//    @Rule
-//    public CassandraCQLUnit cassandraCQLUnit = new CassandraCQLUnit(new ClassPathCQLDataSet("DataModel/ScyllaDB/scylla_obs_datamodel.cql", scyllaKeyspace));
-    
     @Rule
     public DockerComposeRule docker = DockerComposeRule.builder()
             .file("src/integration-test/resources/docker-compose.yml")
@@ -86,10 +81,15 @@ public class CDCPartyTopologyIT {
 		LOG.info("LocalCluster setting up...");
 		cluster = new LocalCluster();
 		LOG.info("...LocalCluster set up.");
+		
+		LOG.info("Loading topology in LocalCluster...");
+		CDCPartyTopology.loadTopologyInStorm(cluster);
+		LOG.info("...topology loaded.");
 	}
     
 	@After
 	public void stop() throws Exception {
+		// Don't call the close() methods to avoid guava incompatibility issue:
 		// Close the curator client
 //		if (client != null) {
 //			client.close();
@@ -110,9 +110,6 @@ public class CDCPartyTopologyIT {
 	 */
 	@Test 
 	public void testRequestTopology() throws Exception {
-		// Load topology in local storm cluster
-		CDCPartyTopology.loadTopologyInStorm(cluster);
-
 		// When request then get response and created element
 		CDCPartyRequestSender rs = new CDCPartyRequestSender(ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace));
 		rs.requestManyCreateToTopologyAndWaitResponse(true, 1);

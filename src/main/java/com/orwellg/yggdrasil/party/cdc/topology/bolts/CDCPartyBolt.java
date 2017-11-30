@@ -33,7 +33,7 @@ public class CDCPartyBolt extends BasicRichBolt {
 
 	private static final long serialVersionUID = 1L;
 
-	private static final Logger LOG = LogManager.getLogger(CDCPartyBolt.class);
+	protected static final Logger LOG = LogManager.getLogger(CDCPartyBolt.class);
 
 	protected Gson gson;
 
@@ -95,15 +95,13 @@ public class CDCPartyBolt extends BasicRichBolt {
 			cdcPartyBo.processChangeRecord(cr);
 
 			CDCPartyChangeRecord result = cr;
-			LOG.debug("{}Action {} finished. Sending the results {}.", logPreffix, eventName, result);
 
 			getCollector().emit(input, new Values(key, processId, result));
 			getCollector().ack(input);
 
-			LOG.info("{}Action {} finished. Results sent successfully.", logPreffix, eventName, result);
+			LOG.debug("{}Action {} finished, result = {}.", logPreffix, eventName, result);
 		} catch (Exception e) {
-			LOG.error("{}Error in Action {} for {}. Message: {}", logPreffix, eventName, cr, e.getMessage(),
-					e);
+			LOG.error(String.format("%sError in Action %s for %s. Message: %s", logPreffix, eventName, cr, e.getMessage()), e);
 			getCollector().reportError(e);
 			getCollector().fail(input);
 		}

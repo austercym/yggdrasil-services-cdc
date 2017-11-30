@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -18,6 +19,7 @@ import com.google.gson.Gson;
 import com.orwellg.umbrella.avro.types.cdc.CDCPartyChangeRecord;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.yggdrasil.party.cdc.bo.CDCPartyBO;
+import com.orwellg.yggdrasil.party.cdc.bo.CDCPartyBOTest;
 
 public class CDCPartyBoltTest {
 
@@ -27,21 +29,21 @@ public class CDCPartyBoltTest {
 	protected TopologyConfig config;
 
 	@Mock
-	protected Tuple tuple;
-	protected String insertJson = 
-			"{\"domain\": 0, \"server_id\": 1, \"sequence\": 45, \"event_number\": 1, \"timestamp\": 1511543507, \"event_type\": \"insert\", "
-					+ "\"Party_ID\": \"1IPAGO\", \"FirstName\": \"James\", \"LastName\": \"Butt\", \"BusinessName\": \"\", \"TradingName\": \"\", "
-					+ "\"Title\": 0, \"Salutation\": \"\", \"OtherNames\": \"Le\", \"ID_List\": \"{\\\"ID_List\\\":{\\\"Email\\\":\\\"jbutt@gmail.com\\\"}}\","
-					+ " \"Addresses\": \"[]\", \"Party_InfoAssets\": \"\\u0000\"}";
+	protected Tuple insertTuple;
+	@Mock
+	protected Tuple updateBeforeTuple;
+	@Mock
+	protected Tuple updateAfterTuple;
+	@Mock
+	protected Tuple deleteTuple;
 
 	@Mock
 	protected Session ses;
 	@Mock
 	protected CDCPartyBO cdcPartyBo;
-	protected CDCPartyChangeRecord changeRecord = new Gson().fromJson(insertJson, CDCPartyChangeRecord.class);
 	@Mock
 	protected OutputCollector collector;
-
+	
 	@Rule
 	public MockitoRule mockitoRule = MockitoJUnit.rule();
 	
@@ -52,7 +54,6 @@ public class CDCPartyBoltTest {
 		// A real Tuple that arrives KafkaEventProcessBolt looks like this:
 		// {topic=com.orwellg.yggdrasil.party.get.request.1, partition=0, offset=0, key=null, value=CjAuMC4xJjIwMTctMTEtMjggMTk6MTI6MDQCJEdldFBhcnR5VG9wb2xvZ3lJVBBHZXRQYXJ0eQIoR2V0UGFydHlUb3BvbG9neVRlc3RURVZFTlQtYjE3NjdjMWYtNDJmYi00Njk5LWE0MjYtZDk0ZTVjOGNiMTkyAlB7IklkIjp7IklkIjoiMjUxNzgwMDEyNjM2MjE1NzA1NklQQUdPIn19AAwxMzAwODAMSVBBR09PAgxJUEFHT08CAgI=, headers=AA==}
 //		when(tuple.getValues()).thenReturn(Arrays.asList("", "", "", "", insertJson));
-		when(tuple.getValueByField("eventData")).thenReturn(changeRecord);
 		
 		cdcPartyBolt.session = ses;
 		cdcPartyBolt.cdcPartyBo = cdcPartyBo;
@@ -67,13 +68,27 @@ public class CDCPartyBoltTest {
 
 	@Test
 	public void testExecute() throws Exception {
-		// Given insert CDC event
-		// When execute() with CDCPartyChangeRecord in value 4 of Tuple
-		cdcPartyBolt.execute(tuple);
+		// Given insert CDC event tuple
+		CDCPartyChangeRecord insertChangeRecord = new Gson().fromJson(CDCPartyBOTest.INSERT_CDC_JSON, CDCPartyChangeRecord.class);
+		String key = "key1234";
+		when(insertTuple.getValueByField("key")).thenReturn(key);
+		String processId = "processId123";
+		when(insertTuple.getValueByField("processId")).thenReturn(processId);
+		when(insertTuple.getValueByField("eventData")).thenReturn(insertChangeRecord);
+		when(insertTuple.getValueByField("eventName")).thenReturn(insertChangeRecord.getEventType().toString());
+		
+		// When execute() with CDCPartyChangeRecord in eventData of Tuple
+		cdcPartyBolt.execute(insertTuple);
+		
 		// Then Party insert requested to CDCPartyBO
-//		verify(cdcPartyBolt.cdcPartyBo).parseChangeRecordJson(insertJson);
-		verify(cdcPartyBolt.cdcPartyBo).processChangeRecord(changeRecord);
+		verify(cdcPartyBolt.cdcPartyBo).processChangeRecord(insertChangeRecord);
 		// And emit with CDCPartyChangeRecord as result in Tuple
-//		verify(collector).emit(eq(tuple), any(Values.class));
+		verify(collector).emit(insertTuple, new Values(insertTuple.getValueByField("key"), insertTuple.getValueByField("processId"), insertChangeRecord));
+		verify(collector).ack(insertTuple);
 	}
+
+//	Scenario 5 - Error executing insert/update_after/delete
+//	- When insert/update_after/delete CDC event received on CDC topic "com.orwellg.yggdrasil.party.CDC.request.1" and exception occurs
+//	- Then logged at error level full stacktrace including the original ChangeRecord event as it came from maxscale. Nothing published to kafka topic.
+//	- And exception must be thrown so that the worker dies and then storm spawns a new worker and retries indefinitely. Storm collector emit() and ack() must not be called.
 }
