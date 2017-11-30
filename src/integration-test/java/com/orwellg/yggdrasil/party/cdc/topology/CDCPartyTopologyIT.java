@@ -112,7 +112,7 @@ public class CDCPartyTopologyIT {
 	public void testRequestTopology() throws Exception {
 		// When request then get response and created element
 		CDCPartyRequestSender rs = new CDCPartyRequestSender(ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace));
-		rs.requestManyCreateToTopologyAndWaitResponse(true, 1);
+		rs.requestManyCreateToTopologyAndWaitResponse(1);
 
 		cluster.shutdown();
 

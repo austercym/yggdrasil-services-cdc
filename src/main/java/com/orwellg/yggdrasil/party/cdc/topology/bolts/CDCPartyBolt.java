@@ -33,14 +33,14 @@ public class CDCPartyBolt extends BasicRichBolt {
 
 	private static final long serialVersionUID = 1L;
 
-	protected static final Logger LOG = LogManager.getLogger(CDCPartyBolt.class);
+	protected Logger LOG = LogManager.getLogger(CDCPartyBolt.class);
 
 	protected Gson gson;
 
 	protected CDCPartyBO cdcPartyBo;
 	protected Session session;
 
-	private String logPreffix;
+	protected String logPreffix;
 
 	/**
 	 * {@inheritDoc}
@@ -102,8 +102,8 @@ public class CDCPartyBolt extends BasicRichBolt {
 			LOG.debug("{}Action {} finished, result = {}.", logPreffix, eventName, result);
 		} catch (Exception e) {
 			LOG.error(String.format("%sError in Action %s for %s. Message: %s", logPreffix, eventName, cr, e.getMessage()), e);
-			getCollector().reportError(e);
-			getCollector().fail(input);
+			// Exception must be thrown so that the worker dies and then storm spawns a new worker and retries indefinitely.
+			throw new RuntimeException(e);
 		}
 	}
 
