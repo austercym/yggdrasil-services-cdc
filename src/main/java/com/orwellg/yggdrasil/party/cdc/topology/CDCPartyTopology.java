@@ -8,23 +8,18 @@ import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
 import org.apache.storm.generated.StormTopology;
-import org.apache.storm.topology.IRichBolt;
 
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.storm.topology.TopologyFactory;
-import com.orwellg.umbrella.commons.storm.topology.component.bolt.EventErrorBolt;
 import com.orwellg.umbrella.commons.storm.topology.component.spout.KafkaSpout;
 import com.orwellg.umbrella.commons.storm.topology.generic.bolt.GBolt;
 import com.orwellg.umbrella.commons.storm.topology.generic.bolt.GRichBolt;
 import com.orwellg.umbrella.commons.storm.topology.generic.grouping.ShuffleGrouping;
 import com.orwellg.umbrella.commons.storm.topology.generic.spout.GSpout;
-import com.orwellg.umbrella.commons.storm.wrapper.kafka.KafkaBoltWrapper;
 import com.orwellg.umbrella.commons.storm.wrapper.kafka.KafkaSpoutWrapper;
 import com.orwellg.umbrella.commons.utils.config.ZookeeperUtils;
 import com.orwellg.yggdrasil.party.cdc.topology.bolts.CDCPartyBolt;
-import com.orwellg.yggdrasil.party.cdc.topology.bolts.CDCPartyFinalProcessBolt;
-import com.orwellg.yggdrasil.party.cdc.topology.bolts.KafkaChangeRecordGeneratorBolt;
 import com.orwellg.yggdrasil.party.cdc.topology.bolts.KafkaChangeRecordProcessBolt;
 
 /**
@@ -50,12 +45,12 @@ public class CDCPartyTopology {
 	private static final String KAFKA_EVENT_READER_COMPONENT_ID = "cdc-party-kafka-event-reader";
 	private static final String KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID = "cdc-party-kafka-event-success-process";
 	private static final String CDC_PARTY_COMPONENT_ID = "cdc-party-action";
-	private static final String KAFKA_EVENT_GENERATOR_COMPONENT_ID = "cdc-party-kafka-event-generator";
-	private static final String KAFKA_EVENT_PRODUCER_COMPONENT_ID = "cdc-party-kafka-event-producer";
-	private static final String FINAL_PROCESS_COMPONENT_ID = "cdc-party-final-process";
-
-	private static final String KAFKA_ERROR_PRODUCER_COMPONENT_ID = "cdc-party-kafka-error-producer";
-	private static final String KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID = "cdc-party-kafka-event-error-process";
+//	private static final String KAFKA_EVENT_GENERATOR_COMPONENT_ID = "cdc-party-kafka-event-generator";
+//	private static final String KAFKA_EVENT_PRODUCER_COMPONENT_ID = "cdc-party-kafka-event-producer";
+//	private static final String FINAL_PROCESS_COMPONENT_ID = "cdc-party-final-process";
+//
+//	private static final String KAFKA_ERROR_PRODUCER_COMPONENT_ID = "cdc-party-kafka-error-producer";
+//	private static final String KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID = "cdc-party-kafka-event-error-process";
 
 	private final static Logger LOG = LogManager.getLogger(CDCPartyTopology.class);
 
@@ -129,43 +124,42 @@ public class CDCPartyTopology {
 
 		// CDC bolt
 		GBolt<?> actionBolt = new GRichBolt(CDC_PARTY_COMPONENT_ID, new CDCPartyBolt(), config.getActionBoltHints());
-		// Link to the former "uniqueId" bolt
+		// Link to the former bolt
 		actionBolt.addGrouping(new ShuffleGrouping(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID));
 
-		// Process the result of the action
-		GBolt<?> finalProcessBolt = new GRichBolt(FINAL_PROCESS_COMPONENT_ID, new CDCPartyFinalProcessBolt(),
-				config.getActionBoltHints());
-		finalProcessBolt.addGrouping(new ShuffleGrouping(CDC_PARTY_COMPONENT_ID));
+//		// Process the result of the action
+//		GBolt<?> finalProcessBolt = new GRichBolt(FINAL_PROCESS_COMPONENT_ID, new CDCPartyFinalProcessBolt(),
+//				config.getActionBoltHints());
+//		finalProcessBolt.addGrouping(new ShuffleGrouping(CDC_PARTY_COMPONENT_ID));
 
-		////////
-		// Event generator
-		GBolt<?> kafkaEventGeneratorBolt = new GRichBolt(KAFKA_EVENT_GENERATOR_COMPONENT_ID, new KafkaChangeRecordGeneratorBolt(),
-				config.getActionBoltHints());
-		kafkaEventGeneratorBolt.addGrouping(new ShuffleGrouping(FINAL_PROCESS_COMPONENT_ID));
+//		////////
+//		// Event generator
+//		GBolt<?> kafkaEventGeneratorBolt = new GRichBolt(KAFKA_EVENT_GENERATOR_COMPONENT_ID, new KafkaChangeRecordGeneratorBolt(),
+//				config.getActionBoltHints());
+//		kafkaEventGeneratorBolt.addGrouping(new ShuffleGrouping(FINAL_PROCESS_COMPONENT_ID));
 
-		// Send a kafka event with the result
-		KafkaBoltWrapper kafkaPublisherBoltWrapper = new KafkaBoltWrapper(config.getKafkaPublisherBoltConfig(), String.class, String.class);
-		GBolt<?> kafkaEventProducer = new GRichBolt(KAFKA_EVENT_PRODUCER_COMPONENT_ID,
-				kafkaPublisherBoltWrapper.getKafkaBolt(), config.getEventResponseHints());
-		kafkaEventProducer.addGrouping(new ShuffleGrouping(KAFKA_EVENT_GENERATOR_COMPONENT_ID));
+//		// Send a kafka event with the result
+//		KafkaBoltWrapper kafkaPublisherBoltWrapper = new KafkaBoltWrapper(config.getKafkaPublisherBoltConfig(), String.class, String.class);
+//		GBolt<?> kafkaEventProducer = new GRichBolt(KAFKA_EVENT_PRODUCER_COMPONENT_ID,
+//				kafkaPublisherBoltWrapper.getKafkaBolt(), config.getEventResponseHints());
+//		kafkaEventProducer.addGrouping(new ShuffleGrouping(KAFKA_EVENT_GENERATOR_COMPONENT_ID));
 
-		/////////
-		// Error processing bolts
-		GBolt<IRichBolt> kafkaEventError = new GRichBolt(KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID, new EventErrorBolt(), config.getEventErrorHints());
-		kafkaEventError
-				.addGrouping(new ShuffleGrouping(KAFKA_EVENT_READER_COMPONENT_ID, KafkaSpout.EVENT_ERROR_STREAM));
-		// GBolt for send errors of events to kafka
-		KafkaBoltWrapper kafkaErrorBoltWrapper = new KafkaBoltWrapper(config.getKafkaPublisherErrorBoltConfig(), String.class, String.class);
-		GBolt<?> kafkaErrorProducer = new GRichBolt(KAFKA_ERROR_PRODUCER_COMPONENT_ID,
-				kafkaErrorBoltWrapper.getKafkaBolt(), config.getEventErrorHints());
-		kafkaErrorProducer.addGrouping(new ShuffleGrouping(KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID));
+//		/////////
+//		// Error processing bolts
+//		GBolt<IRichBolt> kafkaEventError = new GRichBolt(KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID, new EventErrorBolt(), config.getEventErrorHints());
+//		kafkaEventError
+//				.addGrouping(new ShuffleGrouping(KAFKA_EVENT_READER_COMPONENT_ID, KafkaSpout.EVENT_ERROR_STREAM));
+//		// GBolt for send errors of events to kafka
+//		KafkaBoltWrapper kafkaErrorBoltWrapper = new KafkaBoltWrapper(config.getKafkaPublisherErrorBoltConfig(), String.class, String.class);
+//		GBolt<?> kafkaErrorProducer = new GRichBolt(KAFKA_ERROR_PRODUCER_COMPONENT_ID,
+//				kafkaErrorBoltWrapper.getKafkaBolt(), config.getEventErrorHints());
+//		kafkaErrorProducer.addGrouping(new ShuffleGrouping(KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID));
 
 		
 		// Build the topology
 		StormTopology topology = TopologyFactory.generateTopology(kafkaEventReader,
 				Arrays.asList(
-						new GBolt[] { kafkaEventProcess, actionBolt, finalProcessBolt, kafkaEventGeneratorBolt,
-								kafkaEventProducer, kafkaEventError, kafkaErrorProducer }));
+						new GBolt[] { kafkaEventProcess, actionBolt }));
 
 		LOG.info("Party Topology created, submitting it to storm...");
 

@@ -27,8 +27,6 @@ import com.orwellg.yggdrasil.party.cdc.bo.CDCPartyBOTest;
 
 public class CDCPartyBoltTest {
 
-	protected CDCPartyBolt bolt = new CDCPartyBolt();
-
 	protected final CDCPartyChangeRecord INSERT_CHANGE_RECORD = new Gson().fromJson(CDCPartyBOTest.INSERT_CDC_JSON, CDCPartyChangeRecord.class);
 	
 	@Mock

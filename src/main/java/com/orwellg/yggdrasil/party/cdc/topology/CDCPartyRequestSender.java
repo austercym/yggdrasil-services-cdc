@@ -55,7 +55,7 @@ public class CDCPartyRequestSender {
 		Producer<String, String> producer = makeProducer(bootstrapServer);
 		
 		// Generate ChangeRecords
-		List<CDCPartyChangeRecord> events = generateElementsToCreate(numElements);
+		List<CDCPartyChangeRecord> events = generateChangeRecordElements(numElements);
 		
 		// Send ChangeRecords
 		sendRequestEventsToKafka(events, producer, requestTopic);
@@ -69,9 +69,29 @@ public class CDCPartyRequestSender {
 		}
 	}
 
+	/**
+	 * Test an already loaded topology by sending a Create event to kafka
+	 * topic, and wait for Created response.<br/>
+	 * Pre: topology already loaded in storm.
+	 */
+	public void requestToTopologyAndCauseError() throws Exception {
+		TopologyConfig config = TopologyConfigFactory.getTopologyConfig();
+		String bootstrapServer = config.getKafkaBootstrapHosts();
+
+		// Given producer
+		String requestTopic = config.getKafkaSubscriberSpoutConfig().getTopic().getName().get(0);
+		Producer<String, String> producer = makeProducer(bootstrapServer);
+		
+		// Send ChangeRecords
+		sendRequestEventToKafkaToCauseError(producer, requestTopic);
+	}
+
 	public static void main(String[] args) throws Exception {
 		ScyllaParams scyllaParams = TopologyConfigFactory.getTopologyConfig().getScyllaConfig().getScyllaParams();
 		CDCPartyRequestSender rs = new CDCPartyRequestSender(ScyllaManager.getInstance(scyllaParams.getNodeList()).getSession(scyllaParams.getKeyspace()));
+		// Test cause error
+		rs.requestToTopologyAndCauseError();
+		// And correct events
 		rs.requestManyCreateToTopologyAndWaitResponse(Integer.valueOf(args[0]));
 	}
 
@@ -88,22 +108,39 @@ public class CDCPartyRequestSender {
 		LOG.info("{} events sent to topic {}.", events.size(), topic);
 	}
 
-	protected List<CDCPartyChangeRecord> generateElementsToCreate(int numElements) throws IOException, GeneratorException {
+	private void sendRequestEventToKafkaToCauseError(Producer<String, String> producer, String topic) {
+		String json = "bad json to cause error";
+
+		// Write event to kafka topic.
+		LOG.debug("Sending changeRecord {} to topic {}...", json, topic);
+		producer.send(new ProducerRecord<String, String>(topic, json));
+		LOG.debug("ChangeRecord {} sent to topic {}.", json, topic);
+		LOG.info("{} events sent to topic {}.", 1, topic);
+	}
+	
+	protected List<CDCPartyChangeRecord> generateChangeRecordElements(int numElements) throws IOException, GeneratorException {
 		ArrayList<CDCPartyChangeRecord> l = new ArrayList<>(numElements);
 		for (int i = 0; i < numElements; i++) {
-			CDCPartyChangeRecord element = new CDCPartyChangeRecord();
-			
-			element.setSequence(i);
-			element.setEventNumber(i);
-			element.setTimestamp((int) System.currentTimeMillis());
-			element.setEventType(EVENT_TYPES.insert);
-			
-			element.setPartyID(idGen.generateLocalUniqueIDStr());
-			element.setFirstName("PartyByCDCRequestSender");
+			String id = idGen.generateLocalUniqueIDStr();
+
+			CDCPartyChangeRecord element = generateChangeRecordElement(i, id);
 			
 			l.add(element);
 		}
 		return l;
+	}
+
+	private CDCPartyChangeRecord generateChangeRecordElement(int eventNumber, String id) {
+		CDCPartyChangeRecord element = new CDCPartyChangeRecord();
+		
+		element.setSequence(eventNumber);
+		element.setEventNumber(eventNumber);
+		element.setTimestamp((int) System.currentTimeMillis());
+		element.setEventType(EVENT_TYPES.insert);
+		
+		element.setPartyID(id);
+		element.setFirstName("PartyByCDCRequestSender");
+		return element;
 	}
 
 	private Producer<String, String> makeProducer(String bootstrapServer) {

@@ -24,7 +24,7 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	private static final Logger LOG = LogManager.getLogger(KafkaChangeRecordProcessBolt.class);
+	protected Logger LOG = LogManager.getLogger(KafkaChangeRecordProcessBolt.class);
 	
 	protected Gson gson;
 	
@@ -52,12 +52,29 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 		try {
 			String crJson = getJsonFromChangeRecordTuple(input);
 
-			CDCPartyChangeRecord cr = gson.fromJson(crJson, CDCPartyChangeRecord.class);
+			CDCPartyChangeRecord cr = parseJson(crJson);
 			
-			sendNextStep(input, cr);
+			if (cr != null) {
+				sendNextStep(input, cr);
+			} else {
+				LOG.info(String.format("Ignoring schema change ChangeRecord = %s", input));
+				getCollector().ack(input);
+			}
 		} catch (Exception e) {
-			LOG.error("The received event {} can not be decoded. Message: {}", input, e.getMessage(), e);
-			error(e, input);
+			LOG.error(String.format("Error decoding ChangeRecord %s. Message: %s", input, e.getMessage()), e);
+			// Exception must be thrown so that the worker dies and then storm spawns a new worker and retries indefinitely.
+			throw new RuntimeException(e);
+		}
+	}
+
+	protected CDCPartyChangeRecord parseJson(String crJson) {
+		if (crJson != null && crJson.startsWith(
+				"{\"namespace\": \"MaxScaleChangeDataSchema.avro\", \"type\": \"record\", \"name\": \"ChangeRecord\","+ " \"fields\":")) {
+			// Ignore
+			return null;
+		} else {
+			CDCPartyChangeRecord cr = gson.fromJson(crJson, CDCPartyChangeRecord.class);
+			return cr;
 		}
 	}
 	
@@ -78,25 +95,42 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 	
 	public void sendNextStep(Tuple input, CDCPartyChangeRecord cr) {
 
+		String key = outputTupleKey(cr);
+		String processId = outputTupleProcessId(cr);
+		String eventName = outputTupleEventName(cr);
+		CDCPartyChangeRecord eventData = cr;
+
+		LOG.debug("[Key: {}][ProcessId: {}]: The event was decoded. Send the tuple to the next step in the Topology.",
+				key, processId);
+
+		getCollector().emit(input, new Values(key, processId, eventName, eventData));
+		getCollector().ack(input);
+
+		LOG.debug("[Key: {}][ProcessId: {}]: Action {} sent for processing in storm, eventData = {}.",
+				key, processId, eventName, eventData);
+
+	}
+
+	protected String outputTupleEventName(CDCPartyChangeRecord cr) {
+		String eventName = cr.getEventType().toString();
+		return eventName;
+	}
+
+	protected String outputTupleProcessId(CDCPartyChangeRecord cr) {
+		String eventType = cr.getEventType().toString();
+		String elementId = cr.getPartyID();
+		String processId = eventType + "-" + elementId;
+		return processId;
+	}
+
+	protected String outputTupleKey(CDCPartyChangeRecord cr) {
 		Integer sequence = cr.getSequence();
 		Integer eventNumber = cr.getEventNumber();
 		Integer timestamp = cr.getTimestamp();
 		String eventType = cr.getEventType().toString();
 		String elementId = cr.getPartyID();
 		String key = sequence + "-" + eventNumber + "-" + timestamp + "-" + eventType + "-" + elementId;
-		String processId = eventType + "-" + elementId;
-		String eventName = eventType;
-		CDCPartyChangeRecord eventData = cr;
-
-		LOG.debug("[Key: {}][ProcessId: {}]: The event was decoded. Send the tuple to the next step in the Topology.",
-				key, processId);
-
-		getCollector().emit(input, new Values(key, processId, eventName, cr));
-		getCollector().ack(input);
-
-		LOG.debug("[Key: {}][ProcessId: {}]: Action {} sent for processing in storm, eventData = {}.",
-				key, processId, eventName, eventData);
-
+		return key;
 	}
 
 	@Override

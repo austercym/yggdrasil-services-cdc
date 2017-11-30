@@ -27,7 +27,7 @@ Scylla connection params read from zookeeper. Eg configuration in zookeeper (OVH
 
 ```sh
 create /com/orwellg/yggdrasil/scylla/yggdrassil.scylla.node.list scylla-node1:9042,scylla-node2:9042,scylla-node3:9042
-create /com/orwellg/yggdrasil/scylla/yggdrassil.scylla.keyspace.customer.product ipagoo
+create /com/orwellg/yggdrasil/scylla/yggdrassil.scylla.keyspace.customer.product Customer_Product_DB
 ```
 
 
