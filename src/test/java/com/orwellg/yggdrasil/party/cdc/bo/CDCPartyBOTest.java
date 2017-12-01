@@ -91,7 +91,7 @@ public class CDCPartyBOTest {
 			// Then do nothing
 			verify(partyDao, never()).insert(party);
 			// And logged at info level nothing done including the original ChangeRecord event as it came from maxscale.
-			verify(cdcPartyBo.LOG).info("Nothing done for changeRecord event = {}", cr);
+			verify(cdcPartyBo.LOG).debug("Nothing done for update_before changeRecord event = {}", cr);
 		}
 
 		{

@@ -47,6 +47,9 @@ public class CDCPartyBO {
 		} else if (EVENT_TYPES.delete.equals(changeRecord.getEventType())) {
 			partyDao.delete(party);
 			LOG.info("Party deleted in scylla = {} for changeRecord event = {}", party, changeRecord);
+		} else if (EVENT_TYPES.update_before.equals(changeRecord.getEventType())) {
+			LOG.debug("Nothing done for update_before changeRecord event = {}", changeRecord);
+			return null;
 		} else {
 			LOG.info("Nothing done for changeRecord event = {}", changeRecord);
 			return null;
