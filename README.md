@@ -1,4 +1,4 @@
-# yggdrasil-party-cdc
+# yggdrasil-contract-cdc
 Topology that reads CDC events from topic and writes to scylla.
 
 Typical scenario:
@@ -44,7 +44,7 @@ mvn clean install -P integration (for "integration" environment, eg: to be deplo
 ## Run manually in local cluster
 
 ```sh
-java -cp target/yggdrasil-party-cdc-0.0.1-SNAPSHOT-jar-with-dependencies.jar com.orwellg.yggdrasil.party.cdc.topology.CDCPartyTopology local
+java -cp target/yggdrasil-contract-cdc-0.0.1-SNAPSHOT-jar-with-dependencies.jar com.orwellg.yggdrasil.contract.cdc.topology.CDCContractTopology local
 ```
 
 ## Upload to storm cluster in OVH test environment:
@@ -56,7 +56,7 @@ Upload generated jar-with-dependencies.
 
 
 ```sh
-storm jar <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.cdc.topology.CDCPartyTopology -c nimbus.host=hdf-node2
+storm jar <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.contract.cdc.topology.CDCContractTopology -c nimbus.host=hdf-node2
 ```
 
 
@@ -65,6 +65,6 @@ storm jar <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.cdc.topol
 With a previously deployed topology, send one or many requests and wait responses:
 
 ```sh
-java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.party.cdc.topology.CDCPartyRequestSender 1
+java -cp <name>-jar-with-dependencies.jar com.orwellg.yggdrasil.contract.cdc.topology.CDCContractRequestSender 1
 ```
 

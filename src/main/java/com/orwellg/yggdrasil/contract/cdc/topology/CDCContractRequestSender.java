@@ -1,4 +1,4 @@
-package com.orwellg.yggdrasil.party.cdc.topology;
+package com.orwellg.yggdrasil.contract.cdc.topology;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -16,28 +16,28 @@ import org.lable.oss.uniqueid.GeneratorException;
 
 import com.datastax.driver.core.Session;
 import com.google.gson.Gson;
-import com.orwellg.umbrella.avro.types.cdc.CDCPartyChangeRecord;
+import com.orwellg.umbrella.avro.types.cdc.CDCContractChangeRecord;
 import com.orwellg.umbrella.avro.types.cdc.EVENT_TYPES;
 import com.orwellg.umbrella.commons.config.params.ScyllaParams;
-import com.orwellg.umbrella.commons.repositories.scylla.PartyRepository;
-import com.orwellg.umbrella.commons.repositories.scylla.impl.PartyRepositoryImpl;
+import com.orwellg.umbrella.commons.repositories.scylla.ContractRepository;
+import com.orwellg.umbrella.commons.repositories.scylla.impl.ContractRepositoryImpl;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
-import com.orwellg.umbrella.commons.types.scylla.entities.Party;
+import com.orwellg.umbrella.commons.types.scylla.entities.Contract;
 import com.orwellg.umbrella.commons.utils.scylla.ScyllaManager;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
 
-public class CDCPartyRequestSender {
+public class CDCContractRequestSender {
 
-	protected PartyRepository partyDao;
+	protected ContractRepository contractDao;
 	protected UniqueIDGenerator idGen;
 	protected Gson gson = new Gson();
     
-    public final static Logger LOG = LogManager.getLogger(CDCPartyRequestSender.class);
+    public final static Logger LOG = LogManager.getLogger(CDCContractRequestSender.class);
 
-    public CDCPartyRequestSender(Session ses) {
-		partyDao = new PartyRepositoryImpl(ses);
+    public CDCContractRequestSender(Session ses) {
+		contractDao = new ContractRepositoryImpl(ses);
 		idGen = new UniqueIDGeneratorLocal();
 	}
 
@@ -55,7 +55,7 @@ public class CDCPartyRequestSender {
 		Producer<String, String> producer = makeProducer(bootstrapServer);
 		
 		// Generate ChangeRecords
-		List<CDCPartyChangeRecord> events = generateChangeRecordElements(numElements);
+		List<CDCContractChangeRecord> events = generateChangeRecordElements(numElements);
 		
 		// Send ChangeRecords
 		sendRequestEventsToKafka(events, producer, requestTopic);
@@ -63,7 +63,7 @@ public class CDCPartyRequestSender {
 		// Check all elements inserted in DB
 		int maxRetries = 120;
 		int interval = 1000;
-		List<Party> processedElements = waitAndGetInDbAllElements(events, maxRetries, interval);
+		List<Contract> processedElements = waitAndGetInDbAllElements(events, maxRetries, interval);
 		if (events.size() != processedElements.size()) {
 			throw new RuntimeException("All elements should be inserted in scylla DB.");
 		}
@@ -88,19 +88,19 @@ public class CDCPartyRequestSender {
 
 	public static void main(String[] args) throws Exception {
 		ScyllaParams scyllaParams = TopologyConfigFactory.getTopologyConfig().getScyllaConfig().getScyllaParams();
-		CDCPartyRequestSender rs = new CDCPartyRequestSender(ScyllaManager.getInstance(scyllaParams.getNodeList()).getSession(scyllaParams.getKeyspace()));
+		CDCContractRequestSender rs = new CDCContractRequestSender(ScyllaManager.getInstance(scyllaParams.getNodeList()).getSession(scyllaParams.getKeyspace()));
 		// Test cause error
 		rs.requestToTopologyAndCauseError();
 		// And correct events
 		rs.requestManyCreateToTopologyAndWaitResponse(Integer.valueOf(args[0]));
 	}
 
-	private void sendRequestEventsToKafka(List<CDCPartyChangeRecord> events, Producer<String, String> producer, String topic) {
-		for (Iterator<CDCPartyChangeRecord> iterator = events.iterator(); iterator.hasNext();) {
-			CDCPartyChangeRecord changeRecord = iterator.next();
+	private void sendRequestEventsToKafka(List<CDCContractChangeRecord> events, Producer<String, String> producer, String topic) {
+		for (Iterator<CDCContractChangeRecord> iterator = events.iterator(); iterator.hasNext();) {
+			CDCContractChangeRecord changeRecord = iterator.next();
 			String json = gson.toJson(changeRecord);
 
-			// Write CreateParty event to kafka topic.
+			// Write CreateContract event to kafka topic.
 			LOG.debug("Sending changeRecord {} to topic {}...", json, topic);
 			producer.send(new ProducerRecord<String, String>(topic, json));
 			LOG.debug("ChangeRecord {} sent to topic {}.", json, topic);
@@ -118,28 +118,28 @@ public class CDCPartyRequestSender {
 		LOG.info("{} events sent to topic {}.", 1, topic);
 	}
 	
-	protected List<CDCPartyChangeRecord> generateChangeRecordElements(int numElements) throws IOException, GeneratorException {
-		ArrayList<CDCPartyChangeRecord> l = new ArrayList<>(numElements);
+	protected List<CDCContractChangeRecord> generateChangeRecordElements(int numElements) throws IOException, GeneratorException {
+		ArrayList<CDCContractChangeRecord> l = new ArrayList<>(numElements);
 		for (int i = 0; i < numElements; i++) {
 			String id = idGen.generateLocalUniqueIDStr();
 
-			CDCPartyChangeRecord element = generateChangeRecordElement(i, id);
+			CDCContractChangeRecord element = generateChangeRecordElement(i, id);
 			
 			l.add(element);
 		}
 		return l;
 	}
 
-	private CDCPartyChangeRecord generateChangeRecordElement(int eventNumber, String id) {
-		CDCPartyChangeRecord element = new CDCPartyChangeRecord();
+	private CDCContractChangeRecord generateChangeRecordElement(int eventNumber, String id) {
+		CDCContractChangeRecord element = new CDCContractChangeRecord();
 		
 		element.setSequence(eventNumber);
 		element.setEventNumber(eventNumber);
 		element.setTimestamp((int) System.currentTimeMillis());
 		element.setEventType(EVENT_TYPES.insert);
 		
-		element.setPartyID(id);
-		element.setFirstName("PartyByCDCRequestSender");
+		element.setContractID(id);
+		element.setProductIDs("\"{\"ProductIDs\":[{\"ID\":\"650002IPAGO\"},{\"ID\":\"18237641962IPAGO\"}]}\"");
 		return element;
 	}
 
@@ -160,13 +160,13 @@ public class CDCPartyRequestSender {
 		return producer;
 	}
 
-	protected Party waitAndGetById(int maxRetries, int interval, String elementID)
+	protected Contract waitAndGetById(int maxRetries, int interval, String elementID)
 			throws SQLException {
 		int retries;
 		retries = 0;
-		com.orwellg.umbrella.commons.types.scylla.entities.Party p = null;
+		com.orwellg.umbrella.commons.types.scylla.entities.Contract p = null;
 		while (p == null && retries < maxRetries) {
-			p = partyDao.getParty(elementID);
+			p = contractDao.getContract(elementID);
 
 			if (p == null) {
 				retries++;
@@ -182,21 +182,21 @@ public class CDCPartyRequestSender {
 		return p;
 	}
 
-	protected List<Party> waitAndGetInDbAllElements(List<CDCPartyChangeRecord> originEvents, int maxRetries, int interval) throws SQLException {
+	protected List<Contract> waitAndGetInDbAllElements(List<CDCContractChangeRecord> originEvents, int maxRetries, int interval) throws SQLException {
 		List<String> ids = new ArrayList<>();
-		for (Iterator<CDCPartyChangeRecord> iterator = originEvents.iterator(); iterator.hasNext();) {
-			CDCPartyChangeRecord originEvent = iterator.next();
-			ids.add(originEvent.getPartyID());
+		for (Iterator<CDCContractChangeRecord> iterator = originEvents.iterator(); iterator.hasNext();) {
+			CDCContractChangeRecord originEvent = iterator.next();
+			ids.add(originEvent.getContractID());
 		}
 		
 		// Get from db until all found or maxRetries
 		int retries = 0;
-		List<Party> elementsFound = new ArrayList<>();
+		List<Contract> elementsFound = new ArrayList<>();
 		for (Iterator<String> iterator = ids.iterator(); iterator.hasNext();) {
 			String id = (String) iterator.next();
 			
 			LOG.info("getting from DB id = {}, elementsFound = {} of {}...", id, elementsFound.size(), ids.size());
-			Party e = null;
+			Contract e = null;
 			while (e == null && retries < maxRetries) {
 				e = waitAndGetById(maxRetries, interval, id);
 

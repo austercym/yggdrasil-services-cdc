@@ -1,4 +1,4 @@
-package com.orwellg.yggdrasil.party.cdc.topology;
+package com.orwellg.yggdrasil.contract.cdc.topology;
 
 import static org.junit.Assert.assertEquals;
 
@@ -26,7 +26,7 @@ import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
 import com.palantir.docker.compose.DockerComposeRule;
 import com.palantir.docker.compose.connection.waiting.HealthChecks;
 
-public class CDCPartyTopologyIT {
+public class CDCContractTopologyIT {
 
 	protected String scyllaNodes = "localhost:9042";
 	protected String scyllaKeyspace = ScyllaParams.DEFAULT_SCYLA_KEYSPACE_CUSTOMER_PRODUCT_DB;
@@ -38,7 +38,7 @@ public class CDCPartyTopologyIT {
             .waitingForService("scylla", HealthChecks.toHaveAllPortsOpen())
             .build();
 
-    public final static Logger LOG = LogManager.getLogger(CDCPartyTopologyIT.class);
+    public final static Logger LOG = LogManager.getLogger(CDCContractTopologyIT.class);
 
 	protected CuratorFramework client;
 	
@@ -46,6 +46,7 @@ public class CDCPartyTopologyIT {
 
 	@Before
 	public void setUp() throws Exception {
+
 		// Set for tests: zookeeper property /com/orwellg/unique-id-generator/cluster-suffix = IPAGO
 		String zookeeperHost = "localhost:2181";
 		client = CuratorFrameworkFactory.newClient(zookeeperHost, new ExponentialBackoffRetry(1000, 3));
@@ -83,7 +84,7 @@ public class CDCPartyTopologyIT {
 		LOG.info("...LocalCluster set up.");
 		
 		LOG.info("Loading topology in LocalCluster...");
-		CDCPartyTopology.loadTopologyInStorm(cluster);
+		CDCContractTopology.loadTopologyInStorm(cluster);
 		LOG.info("...topology loaded.");
 	}
     
@@ -110,7 +111,7 @@ public class CDCPartyTopologyIT {
 	 */
 	@Test 
 	public void testRequestTopology() throws Exception {
-		CDCPartyRequestSender rs = new CDCPartyRequestSender(ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace));
+		CDCContractRequestSender rs = new CDCContractRequestSender(ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace));
 
 		// When requests sent to topology
 		// Then requests are processed correctly
