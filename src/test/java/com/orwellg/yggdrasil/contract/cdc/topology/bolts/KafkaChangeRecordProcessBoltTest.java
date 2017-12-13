@@ -1,9 +1,10 @@
-package com.orwellg.yggdrasil.party.cdc.topology.bolts;
+package com.orwellg.yggdrasil.contract.cdc.topology.bolts;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
+import com.orwellg.yggdrasil.contract.cdc.bo.CDCContractBOTest;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
@@ -17,27 +18,29 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import com.google.gson.Gson;
-import com.orwellg.umbrella.avro.types.cdc.CDCPartyChangeRecord;
-import com.orwellg.yggdrasil.party.cdc.bo.CDCPartyBOTest;
+import com.orwellg.umbrella.avro.types.cdc.CDCContractChangeRecord;
 
 public class KafkaChangeRecordProcessBoltTest {
 	
 	protected KafkaChangeRecordProcessBolt bolt = new KafkaChangeRecordProcessBolt();
 
-	protected final CDCPartyChangeRecord INSERT_CHANGE_RECORD = new Gson().fromJson(CDCPartyBOTest.INSERT_CDC_JSON, CDCPartyChangeRecord.class);
-	
+	protected final CDCContractChangeRecord INSERT_CHANGE_RECORD = new Gson().fromJson(CDCContractBOTest.INSERT_CDC_JSON, CDCContractChangeRecord.class);
+
 	protected final String SCHEMA_CHANGE_JSON = "{\"namespace\": \"MaxScaleChangeDataSchema.avro\", \"type\": \"record\", \"name\": \"ChangeRecord\","
-			+ " \"fields\": [{\"name\": \"domain\", \"type\": \"int\"}, {\"name\": \"server_id\", \"type\": \"int\"}, {\"name\": \"sequence\", \"type\": \"int\"},"
+			+ " \"fields\": ["
+			+ "{\"name\": \"domain\", \"type\": \"int\"}, {\"name\": \"server_id\", \"type\": \"int\"}, {\"name\": \"sequence\", \"type\": \"int\"},"
 			+ " {\"name\": \"event_number\", \"type\": \"int\"}, {\"name\": \"timestamp\", \"type\": \"int\"}, {\"name\": \"event_type\","
 			+ " \"type\": {\"type\": \"enum\", \"name\": \"EVENT_TYPES\", \"symbols\": [\"insert\", \"update_before\", \"update_after\", \"delete\"]}}, "
-			+ "{\"name\": \"Party_ID\", \"type\": \"string\", \"real_type\": \"varchar\", \"length\": 30}, {\"name\": \"FirstName\", \"type\": \"string\","
-			+ " \"real_type\": \"varchar\", \"length\": 255}, {\"name\": \"LastName\", \"type\": \"string\", \"real_type\": \"varchar\", \"length\": 255}, "
-			+ "{\"name\": \"BusinessName\", \"type\": \"string\", \"real_type\": \"varchar\", \"length\": 255}, {\"name\": \"TradingName\", \"type\": \"string\", "
-			+ "\"real_type\": \"varchar\", \"length\": 255}, {\"name\": \"Title\", \"type\": \"int\", \"real_type\": \"int\", \"length\": 255}, "
-			+ "{\"name\": \"Salutation\", \"type\": \"string\", \"real_type\": \"varchar\", \"length\": 255}, {\"name\": \"OtherNames\", \"type\": \"string\", "
-			+ "\"real_type\": \"varchar\", \"length\": 128}, {\"name\": \"ID_List\", \"type\": \"bytes\", \"real_type\": \"longtext\", \"length\": -1}, "
-			+ "{\"name\": \"Addresses\", \"type\": \"bytes\", \"real_type\": \"longtext\", \"length\": -1}, {\"name\": \"Party_InfoAssets\", \"type\": \"bytes\", "
-			+ "\"real_type\": \"longtext\", \"length\": -1}]}";
+			+ "{\"name\": \"Contract_ID\", \"type\": \"string\", \"real_type\": \"varchar\", \"length\": 30 }, "
+			+ "{\"name\": \"Product_IDs\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"Service_IDs\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"ContractInfoAssets\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"ContractOperations\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"Channels\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"ApplicableLocation\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"Tags\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }"
+			+ "]}";
+
 
 	@Mock
 	protected Tuple insertTuple;
@@ -64,7 +67,7 @@ public class KafkaChangeRecordProcessBoltTest {
 		bolt.LOG = logMock;
 		
 		// CDC json in field 4 of input tuple
-		when(insertTuple.getValues()).thenReturn(new Values("", "", "", "", CDCPartyBOTest.INSERT_CDC_JSON));
+		when(insertTuple.getValues()).thenReturn(new Values("", "", "", "", CDCContractBOTest.INSERT_CDC_JSON));
 
 		// CDC schema change json in field 4 of input tuple
 		when(schemaChangeTuple.getValues()).thenReturn(new Values("", "", "", "", SCHEMA_CHANGE_JSON));
@@ -80,11 +83,11 @@ public class KafkaChangeRecordProcessBoltTest {
 	@Test
 	public void testExecute() throws Exception {
 		// Given insert CDC event tuple
-		// When execute() with CDCPartyChangeRecord in eventData of Tuple
+		// When execute() with CDCContractChangeRecord in eventData of Tuple
 		bolt.execute(insertTuple);
 
-		// Then emit with CDCPartyChangeRecord as eventData in Tuple
-		CDCPartyChangeRecord cr = INSERT_CHANGE_RECORD;
+		// Then emit with CDCContractChangeRecord as eventData in Tuple
+		CDCContractChangeRecord cr = INSERT_CHANGE_RECORD;
 		verify(collector).emit(insertTuple, new Values(bolt.outputTupleKey(cr), bolt.outputTupleProcessId(cr), bolt.outputTupleEventName(cr), cr));
 		verify(collector).ack(insertTuple);
 	}
@@ -92,7 +95,7 @@ public class KafkaChangeRecordProcessBoltTest {
 	@Test
 	public void testIgnoreSchemaChangeEvents() throws Exception {
 		// Given schema change CDC event tuple
-		// When execute() with CDCPartyChangeRecord in eventData of Tuple
+		// When execute() with CDCContractChangeRecord in eventData of Tuple
 		bolt.execute(schemaChangeTuple);
 
 		// Then ignore (do not emit, but ack)
@@ -105,7 +108,7 @@ public class KafkaChangeRecordProcessBoltTest {
 	@Test
 	public void testExecuteErrorScenario() throws Exception {
 		//	Scenario 5 - Error executing insert/update_after/delete
-		//	- When insert/update_after/delete CDC event received on CDC topic "com.orwellg.yggdrasil.party.CDC.request.1" and exception occurs
+		//	- When insert/update_after/delete CDC event received on CDC topic "com.orwellg.yggdrasil.contract.CDC.request.1" and exception occurs
 		//	- Then logged at error level full stacktrace including the original ChangeRecord event as it came from maxscale. Nothing published to kafka topic.
 		//	- And exception must be thrown so that the worker dies and then storm spawns a new worker and retries indefinitely. Storm collector emit() and ack() must not be called.
 		

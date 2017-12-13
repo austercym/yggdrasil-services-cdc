@@ -3,11 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.orwellg</groupId>
-	<artifactId>yggdrasil-party-cdc</artifactId>
+	<artifactId>yggdrasil-contract-cdc</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>yggdrasil-party-cdc</name>
+	<name>yggdrasil-contract-cdc</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
@@ -36,7 +36,7 @@
 
 		<curator.version>2.3.0</curator.version>
 
-		<storm.topology>com.orwellg.yggdrasil.party.cdc.topology.CDCPartyTopology</storm.topology>
+		<storm.topology>com.orwellg.yggdrasil.contract.cdc.topology.CDCContractTopology</storm.topology>
 	</properties>
 
 	<repositories>
