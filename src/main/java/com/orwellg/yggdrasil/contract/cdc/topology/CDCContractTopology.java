@@ -40,7 +40,7 @@ import com.orwellg.yggdrasil.contract.cdc.topology.bolts.KafkaChangeRecordProces
  */
 public class CDCContractTopology {
 
-	private static final String TOPOLOGY_NAME = "cdc-contract";
+	private static final String TOPOLOGY_NAME = "yggdrasil-contract-cdc";
 
 	private static final String KAFKA_EVENT_READER_COMPONENT_ID = "cdc-contract-kafka-event-reader";
 	private static final String KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID = "cdc-contract-kafka-event-success-process";
