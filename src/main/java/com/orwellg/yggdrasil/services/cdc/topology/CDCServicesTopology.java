@@ -1,7 +1,8 @@
-package com.orwellg.yggdrasil.contract.cdc.topology;
+package com.orwellg.yggdrasil.services.cdc.topology;
 
 import java.util.Arrays;
 
+import com.orwellg.yggdrasil.services.cdc.topology.bolts.CDCServicesByContractIdBolt;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.Config;
@@ -19,18 +20,18 @@ import com.orwellg.umbrella.commons.storm.topology.generic.grouping.ShuffleGroup
 import com.orwellg.umbrella.commons.storm.topology.generic.spout.GSpout;
 import com.orwellg.umbrella.commons.storm.wrapper.kafka.KafkaSpoutWrapper;
 import com.orwellg.umbrella.commons.utils.config.ZookeeperUtils;
-import com.orwellg.yggdrasil.contract.cdc.topology.bolts.CDCContractBolt;
-import com.orwellg.yggdrasil.contract.cdc.topology.bolts.KafkaChangeRecordProcessBolt;
+import com.orwellg.yggdrasil.services.cdc.topology.bolts.CDCServicesBolt;
+import com.orwellg.yggdrasil.services.cdc.topology.bolts.KafkaChangeRecordProcessBolt;
 
 /**
- * Storm topology to process Contract actions read from kafka topic. Topology
+ * Storm topology to process Services actions read from kafka topic. Topology
  * summary:
  * <li>KafkaSpoutWrapper
  * 
- * <li>ContractKafkaEventProcessBolt
+ * <li>ServicesKafkaEventProcessBolt
  * <li>GenerateUniqueIDBolt
- * <li>CreateContractBolt
- * <li>ContractFinalProcessBolt
+ * <li>CreateServicesBolt
+ * <li>ServicesFinalProcessBolt
  * 
  * <li>KafkaEventGeneratorBolt
  * <li>KafkaBoltWrapper
@@ -38,24 +39,19 @@ import com.orwellg.yggdrasil.contract.cdc.topology.bolts.KafkaChangeRecordProces
  * @author c.friaszapater
  *
  */
-public class CDCContractTopology {
+public class CDCServicesTopology {
 
-	private static final String TOPOLOGY_NAME = "yggdrasil-contract-cdc";
+	private static final String TOPOLOGY_NAME = "yggdrasil-services-cdc";
 
-	private static final String KAFKA_EVENT_READER_COMPONENT_ID = "cdc-contract-kafka-event-reader";
-	private static final String KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID = "cdc-contract-kafka-event-success-process";
-	private static final String CDC_CONTRACT_COMPONENT_ID = "cdc-contract-action";
-//	private static final String KAFKA_EVENT_GENERATOR_COMPONENT_ID = "cdc-contract-kafka-event-generator";
-//	private static final String KAFKA_EVENT_PRODUCER_COMPONENT_ID = "cdc-contract-kafka-event-producer";
-//	private static final String FINAL_PROCESS_COMPONENT_ID = "cdc-contract-final-process";
-//
-//	private static final String KAFKA_ERROR_PRODUCER_COMPONENT_ID = "cdc-contract-kafka-error-producer";
-//	private static final String KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID = "cdc-contract-kafka-event-error-process";
+	private static final String KAFKA_EVENT_READER_COMPONENT_ID = "cdc-services-kafka-event-reader";
+	private static final String KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID = "cdc-services-kafka-event-success-process";
+	private static final String CDC_SERVICES_COMPONENT_ID = "cdc-services-action";
+	private static final String CDC_SERVICES_BY_CONTRACT_ID_COMPONENT_ID = "cdc-services-by-contract-id-action";
 
-	private final static Logger LOG = LogManager.getLogger(CDCContractTopology.class);
+	private final static Logger LOG = LogManager.getLogger(CDCServicesTopology.class);
 
 	/**
-	 * Set up Contract topology and load it into storm, then keep it up (sleeping) for
+	 * Set up Services topology and load it into storm, then keep it up (sleeping) for
 	 * more than 1h (if it's in LocalCluster).
 	 * 
 	 * @param args
@@ -92,7 +88,7 @@ public class CDCContractTopology {
 	}
 
 	/**
-	 * Set up Contract topology and load into storm.<br/>
+	 * Set up Services topology and load into storm.<br/>
 	 * It may take some 2min to execute synchronously, then another some 2min to
 	 * completely initialize storm asynchronously.<br/>
 	 * Pre: kafka+zookeeper servers up in addresses as defined in subscriber.yaml
@@ -123,45 +119,21 @@ public class CDCContractTopology {
 		// Action bolts:
 
 		// CDC bolt
-		GBolt<?> actionBolt = new GRichBolt(CDC_CONTRACT_COMPONENT_ID, new CDCContractBolt(), config.getActionBoltHints());
+		GBolt<?> actionBolt = new GRichBolt(CDC_SERVICES_COMPONENT_ID, new CDCServicesBolt(), config.getActionBoltHints());
 		// Link to the former bolt
 		actionBolt.addGrouping(new ShuffleGrouping(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID));
 
-//		// Process the result of the action
-//		GBolt<?> finalProcessBolt = new GRichBolt(FINAL_PROCESS_COMPONENT_ID, new CDCContractFinalProcessBolt(),
-//				config.getActionBoltHints());
-//		finalProcessBolt.addGrouping(new ShuffleGrouping(CDC_CONTRACT_COMPONENT_ID));
+		// CDC bolt
+		GBolt<?> servicesByContractIdActionBolt = new GRichBolt(CDC_SERVICES_BY_CONTRACT_ID_COMPONENT_ID, new CDCServicesByContractIdBolt(), config.getActionBoltHints());
+		// Link to the former bolt
+		servicesByContractIdActionBolt.addGrouping(new ShuffleGrouping(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID));
 
-//		////////
-//		// Event generator
-//		GBolt<?> kafkaEventGeneratorBolt = new GRichBolt(KAFKA_EVENT_GENERATOR_COMPONENT_ID, new KafkaChangeRecordGeneratorBolt(),
-//				config.getActionBoltHints());
-//		kafkaEventGeneratorBolt.addGrouping(new ShuffleGrouping(FINAL_PROCESS_COMPONENT_ID));
-
-//		// Send a kafka event with the result
-//		KafkaBoltWrapper kafkaPublisherBoltWrapper = new KafkaBoltWrapper(config.getKafkaPublisherBoltConfig(), String.class, String.class);
-//		GBolt<?> kafkaEventProducer = new GRichBolt(KAFKA_EVENT_PRODUCER_COMPONENT_ID,
-//				kafkaPublisherBoltWrapper.getKafkaBolt(), config.getEventResponseHints());
-//		kafkaEventProducer.addGrouping(new ShuffleGrouping(KAFKA_EVENT_GENERATOR_COMPONENT_ID));
-
-//		/////////
-//		// Error processing bolts
-//		GBolt<IRichBolt> kafkaEventError = new GRichBolt(KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID, new EventErrorBolt(), config.getEventErrorHints());
-//		kafkaEventError
-//				.addGrouping(new ShuffleGrouping(KAFKA_EVENT_READER_COMPONENT_ID, KafkaSpout.EVENT_ERROR_STREAM));
-//		// GBolt for send errors of events to kafka
-//		KafkaBoltWrapper kafkaErrorBoltWrapper = new KafkaBoltWrapper(config.getKafkaPublisherErrorBoltConfig(), String.class, String.class);
-//		GBolt<?> kafkaErrorProducer = new GRichBolt(KAFKA_ERROR_PRODUCER_COMPONENT_ID,
-//				kafkaErrorBoltWrapper.getKafkaBolt(), config.getEventErrorHints());
-//		kafkaErrorProducer.addGrouping(new ShuffleGrouping(KAFKA_EVENT_ERROR_PROCESS_COMPONENT_ID));
-
-		
 		// Build the topology
 		StormTopology topology = TopologyFactory.generateTopology(kafkaEventReader,
 				Arrays.asList(
-						new GBolt[] { kafkaEventProcess, actionBolt }));
+						new GBolt[] { kafkaEventProcess, actionBolt, servicesByContractIdActionBolt }));
 
-		LOG.info("Contract Topology created, submitting it to storm...");
+		LOG.info("Services Topology created, submitting it to storm...");
 
 		// Create the basic config and upload the topology
 		if (conf == null) {

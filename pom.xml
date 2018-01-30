@@ -1,13 +1,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.orwellg.yggdrasil</groupId>
-	<artifactId>yggdrasil-contract-cdc</artifactId>
+	<artifactId>yggdrasil-services-cdc</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>yggdrasil-contract-cdc</name>
+	<name>yggdrasil-services-cdc</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
@@ -26,7 +26,7 @@
 		<gson.google.version>2.8.1</gson.google.version>
 		<log4j.version>2.8.2</log4j.version>
 		<archaius.version>0.7.5</archaius.version>
-		<umbrella.version>0.0.1</umbrella.version>
+		<umbrella.version>0.0.2-SNAPSHOT</umbrella.version>
 		<yggdrasil.version>0.0.1</yggdrasil.version>
 		<org.apache.codec.version>1.10</org.apache.codec.version>
 		<commons.io.version>2.5</commons.io.version>
@@ -36,7 +36,7 @@
 
 		<curator.version>2.3.0</curator.version>
 
-		<storm.topology>com.orwellg.yggdrasil.contract.cdc.topology.CDCContractTopology</storm.topology>
+		<storm.topology>com.orwellg.yggdrasil.services.cdc.topology.CDCServicesTopology</storm.topology>
 	</properties>
 
 	<repositories>
@@ -347,9 +347,9 @@
 		</dependency>
 		<!-- Launch zookeeper server in tests -->
 		<dependency>
-		    <groupId>org.dmonix.junit</groupId>
-		    <artifactId>zookeeper-junit</artifactId>
-		    <version>1.2</version>
+			<groupId>org.dmonix.junit</groupId>
+			<artifactId>zookeeper-junit</artifactId>
+			<version>1.2</version>
 			<scope>test</scope>
 		</dependency>
 

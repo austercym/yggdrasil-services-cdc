@@ -1,4 +1,4 @@
-package com.orwellg.yggdrasil.contract.cdc.topology;
+package com.orwellg.yggdrasil.services.cdc.topology;
 
 import static org.junit.Assert.assertEquals;
 
@@ -26,7 +26,7 @@ import com.orwellg.umbrella.commons.utils.zookeeper.ZooKeeperHelper;
 import com.palantir.docker.compose.DockerComposeRule;
 import com.palantir.docker.compose.connection.waiting.HealthChecks;
 
-public class CDCContractTopologyIT {
+public class CDCServicesTopologyIT {
 
 	protected String scyllaNodes = "localhost:9042";
 	protected String scyllaKeyspace = ScyllaParams.DEFAULT_SCYLA_KEYSPACE_CUSTOMER_PRODUCT_DB;
@@ -38,7 +38,7 @@ public class CDCContractTopologyIT {
             .waitingForService("scylla", HealthChecks.toHaveAllPortsOpen())
             .build();
 
-    public final static Logger LOG = LogManager.getLogger(CDCContractTopologyIT.class);
+    public final static Logger LOG = LogManager.getLogger(CDCServicesTopologyIT.class);
 
 	protected CuratorFramework client;
 	
@@ -73,7 +73,10 @@ public class CDCContractTopologyIT {
 		assertEquals(zookeeperHost, config.getZookeeperConnection());
 		assertEquals(scyllaNodes, TopologyConfigFactory.getTopologyConfig().getScyllaConfig().getScyllaParams().getNodeList());
 		assertEquals(scyllaKeyspace, TopologyConfigFactory.getTopologyConfig().getScyllaConfig().getScyllaParams().getKeyspace());
-		
+
+		// Pause here as sometimes the connection can not be made.
+		Thread.sleep(5000);
+
 		Session session = ScyllaManager.getInstance(scyllaNodes).getCluster().connect();
 //		Session session = ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace);
 		ScyllaDbHelper scyllaDbHelper = new ScyllaDbHelper(session);
@@ -84,7 +87,7 @@ public class CDCContractTopologyIT {
 		LOG.info("...LocalCluster set up.");
 		
 		LOG.info("Loading topology in LocalCluster...");
-		CDCContractTopology.loadTopologyInStorm(cluster);
+		CDCServicesTopology.loadTopologyInStorm(cluster);
 		LOG.info("...topology loaded.");
 	}
     
@@ -111,7 +114,7 @@ public class CDCContractTopologyIT {
 	 */
 	@Test 
 	public void testRequestTopology() throws Exception {
-		CDCContractRequestSender rs = new CDCContractRequestSender(ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace));
+		CDCServicesRequestSender rs = new CDCServicesRequestSender(ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace));
 
 		// When requests sent to topology
 		// Then requests are processed correctly

@@ -1,9 +1,9 @@
-package com.orwellg.yggdrasil.contract.cdc.topology.bolts;
+package com.orwellg.yggdrasil.services.cdc.topology.bolts;
 
 import java.util.Arrays;
 import java.util.Map;
 
-import com.orwellg.yggdrasil.contract.cdc.bo.CDCContractBO;
+import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesBO;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.task.OutputCollector;
@@ -14,7 +14,7 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
 import com.google.gson.Gson;
-import com.orwellg.umbrella.avro.types.cdc.CDCContractChangeRecord;
+import com.orwellg.umbrella.avro.types.cdc.CDCServicesChangeRecord;
 import com.orwellg.umbrella.commons.storm.topology.component.bolt.BasicRichBolt;
 
 public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
@@ -28,7 +28,7 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 	
 	protected Gson gson;
 	
-	protected CDCContractBO cdcContractBo;
+	protected CDCServicesBO cdcServicesBo;
 
 	/**
 	 * {@inheritDoc}
@@ -52,7 +52,7 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 		try {
 			String crJson = getJsonFromChangeRecordTuple(input);
 
-			CDCContractChangeRecord cr = parseJson(crJson);
+			CDCServicesChangeRecord cr = parseJson(crJson);
 			
 			if (cr != null) {
 				sendNextStep(input, cr);
@@ -67,13 +67,13 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 		}
 	}
 
-	protected CDCContractChangeRecord parseJson(String crJson) {
+	protected CDCServicesChangeRecord parseJson(String crJson) {
 		if (crJson != null && crJson.startsWith(
 				"{\"namespace\": \"MaxScaleChangeDataSchema.avro\", \"type\": \"record\", \"name\": \"ChangeRecord\","+ " \"fields\":")) {
 			// Ignore
 			return null;
 		} else {
-			CDCContractChangeRecord cr = gson.fromJson(crJson, CDCContractChangeRecord.class);
+			CDCServicesChangeRecord cr = gson.fromJson(crJson, CDCServicesChangeRecord.class);
 			return cr;
 		}
 	}
@@ -93,12 +93,12 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 		addFielsDefinition(Arrays.asList(new String[] {"key", "processId", "eventData"}));
 	}
 	
-	public void sendNextStep(Tuple input, CDCContractChangeRecord cr) {
+	public void sendNextStep(Tuple input, CDCServicesChangeRecord cr) {
 
 		String key = outputTupleKey(cr);
 		String processId = outputTupleProcessId(cr);
 		String eventName = outputTupleEventName(cr);
-		CDCContractChangeRecord eventData = cr;
+		CDCServicesChangeRecord eventData = cr;
 
 		LOG.debug("[Key: {}][ProcessId: {}]: The event was decoded. Send the tuple to the next step in the Topology.",
 				key, processId);
@@ -111,24 +111,24 @@ public class KafkaChangeRecordProcessBolt extends BasicRichBolt {
 
 	}
 
-	protected String outputTupleEventName(CDCContractChangeRecord cr) {
+	protected String outputTupleEventName(CDCServicesChangeRecord cr) {
 		String eventName = cr.getEventType().toString();
 		return eventName;
 	}
 
-	protected String outputTupleProcessId(CDCContractChangeRecord cr) {
+	protected String outputTupleProcessId(CDCServicesChangeRecord cr) {
 		String eventType = cr.getEventType().toString();
-		String elementId = cr.getContractID();
+		String elementId = cr.getServiceID();
 		String processId = eventType + "-" + elementId;
 		return processId;
 	}
 
-	protected String outputTupleKey(CDCContractChangeRecord cr) {
+	protected String outputTupleKey(CDCServicesChangeRecord cr) {
 		Integer sequence = cr.getSequence();
 		Integer eventNumber = cr.getEventNumber();
 		Integer timestamp = cr.getTimestamp();
 		String eventType = cr.getEventType().toString();
-		String elementId = cr.getContractID();
+		String elementId = cr.getServiceID();
 		String key = sequence + "-" + eventNumber + "-" + timestamp + "-" + eventType + "-" + elementId;
 		return key;
 	}

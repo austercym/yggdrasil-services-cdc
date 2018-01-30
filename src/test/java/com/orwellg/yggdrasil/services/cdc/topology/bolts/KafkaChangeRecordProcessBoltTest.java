@@ -1,10 +1,11 @@
-package com.orwellg.yggdrasil.contract.cdc.topology.bolts;
+package com.orwellg.yggdrasil.services.cdc.topology.bolts;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
-import com.orwellg.yggdrasil.contract.cdc.bo.CDCContractBOTest;
+import com.orwellg.umbrella.avro.types.cdc.CDCServicesChangeRecord;
+import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesBOTest;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
@@ -24,20 +25,18 @@ public class KafkaChangeRecordProcessBoltTest {
 	
 	protected KafkaChangeRecordProcessBolt bolt = new KafkaChangeRecordProcessBolt();
 
-	protected final CDCContractChangeRecord INSERT_CHANGE_RECORD = new Gson().fromJson(CDCContractBOTest.INSERT_CDC_JSON, CDCContractChangeRecord.class);
+	protected final CDCServicesChangeRecord INSERT_CHANGE_RECORD = new Gson().fromJson(CDCServicesBOTest.INSERT_CDC_JSON, CDCServicesChangeRecord.class);
 
 	protected final String SCHEMA_CHANGE_JSON = "{\"namespace\": \"MaxScaleChangeDataSchema.avro\", \"type\": \"record\", \"name\": \"ChangeRecord\","
 			+ " \"fields\": ["
 			+ "{\"name\": \"domain\", \"type\": \"int\"}, {\"name\": \"server_id\", \"type\": \"int\"}, {\"name\": \"sequence\", \"type\": \"int\"},"
 			+ " {\"name\": \"event_number\", \"type\": \"int\"}, {\"name\": \"timestamp\", \"type\": \"int\"}, {\"name\": \"event_type\","
 			+ " \"type\": {\"type\": \"enum\", \"name\": \"EVENT_TYPES\", \"symbols\": [\"insert\", \"update_before\", \"update_after\", \"delete\"]}}, "
+			+ "{\"name\": \"Service_ID\", \"type\": \"string\", \"real_type\": \"varchar\", \"length\": 30 }, "
 			+ "{\"name\": \"Contract_ID\", \"type\": \"string\", \"real_type\": \"varchar\", \"length\": 30 }, "
-			+ "{\"name\": \"Product_IDs\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
-			+ "{\"name\": \"Service_IDs\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
-			+ "{\"name\": \"ContractInfoAssets\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
-			+ "{\"name\": \"ContractOperations\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
-			+ "{\"name\": \"Channels\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
-			+ "{\"name\": \"ApplicableLocation\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"PSHR\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"ServiceFeatures\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
+			+ "{\"name\": \"ServiceOperations\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }, "
 			+ "{\"name\": \"Tags\", \"type\": \"string\", \"real_type\": \"longtext\", \"length\": -1 }"
 			+ "]}";
 
@@ -67,7 +66,7 @@ public class KafkaChangeRecordProcessBoltTest {
 		bolt.LOG = logMock;
 		
 		// CDC json in field 4 of input tuple
-		when(insertTuple.getValues()).thenReturn(new Values("", "", "", "", CDCContractBOTest.INSERT_CDC_JSON));
+		when(insertTuple.getValues()).thenReturn(new Values("", "", "", "", CDCServicesBOTest.INSERT_CDC_JSON));
 
 		// CDC schema change json in field 4 of input tuple
 		when(schemaChangeTuple.getValues()).thenReturn(new Values("", "", "", "", SCHEMA_CHANGE_JSON));
@@ -87,7 +86,7 @@ public class KafkaChangeRecordProcessBoltTest {
 		bolt.execute(insertTuple);
 
 		// Then emit with CDCContractChangeRecord as eventData in Tuple
-		CDCContractChangeRecord cr = INSERT_CHANGE_RECORD;
+		CDCServicesChangeRecord cr = INSERT_CHANGE_RECORD;
 		verify(collector).emit(insertTuple, new Values(bolt.outputTupleKey(cr), bolt.outputTupleProcessId(cr), bolt.outputTupleEventName(cr), cr));
 		verify(collector).ack(insertTuple);
 	}

@@ -1,10 +1,10 @@
-package com.orwellg.yggdrasil.contract.cdc.topology.bolts;
+package com.orwellg.yggdrasil.services.cdc.topology.bolts;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.orwellg.yggdrasil.contract.cdc.bo.CDCContractBO;
+import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesBO;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.task.OutputCollector;
@@ -16,28 +16,28 @@ import org.apache.storm.tuple.Values;
 
 import com.datastax.driver.core.Session;
 import com.google.gson.Gson;
-import com.orwellg.umbrella.avro.types.cdc.CDCContractChangeRecord;
+import com.orwellg.umbrella.avro.types.cdc.CDCServicesChangeRecord;
 import com.orwellg.umbrella.commons.config.params.ScyllaParams;
-import com.orwellg.umbrella.commons.repositories.scylla.impl.ContractRepositoryImpl;
+import com.orwellg.umbrella.commons.repositories.scylla.impl.ServicesRepositoryImpl;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.storm.topology.component.bolt.BasicRichBolt;
 import com.orwellg.umbrella.commons.utils.scylla.ScyllaManager;
 
 /**
- * Bolt to process Contract CDC actions received by topic.
+ * Bolt to process Services CDC actions received by topic.
  * 
  * @author c.friaszapater
  *
  */
-public class CDCContractBolt extends BasicRichBolt {
+public class CDCServicesBolt extends BasicRichBolt {
 
 	private static final long serialVersionUID = 1L;
 
-	protected Logger LOG = LogManager.getLogger(CDCContractBolt.class);
+	protected Logger LOG = LogManager.getLogger(CDCServicesBolt.class);
 
 	protected Gson gson;
 
-	protected CDCContractBO cdcContractBo;
+	protected CDCServicesBO cdcServicesBo;
 	protected Session session;
 
 	protected String logPreffix;
@@ -49,16 +49,16 @@ public class CDCContractBolt extends BasicRichBolt {
 	public void prepare(@SuppressWarnings("rawtypes") Map stormConf, TopologyContext context, OutputCollector collector) {
 		super.prepare(stormConf, context, collector);
 		gson = new Gson();
-		addFielsDefinition(Arrays.asList(new String[] {"key", "message"}));
-		buildCdcContractBo();
+		addFielsDefinition(Arrays.asList("key", "message"));
+		buildCdcServicesBo();
 	}
 
-	private void buildCdcContractBo() {
+	private void buildCdcServicesBo() {
 		if (session == null || session.isClosed()) {
 			ScyllaParams scyllaParams = TopologyConfigFactory.getTopologyConfig().getScyllaConfig().getScyllaParams();
 			session = ScyllaManager.getInstance(scyllaParams.getNodeList()).getSession(scyllaParams.getKeyspace());
-			ContractRepositoryImpl contractDao = new ContractRepositoryImpl(session);
-			cdcContractBo = new CDCContractBO(gson, contractDao);
+			ServicesRepositoryImpl servicesDao = new ServicesRepositoryImpl(session);
+			cdcServicesBo = new CDCServicesBO(gson, servicesDao);
 		}
 	}
 
@@ -72,7 +72,7 @@ public class CDCContractBolt extends BasicRichBolt {
 
 		LOG.debug("CDC ChangeRecord received: {}. Starting the execution process.", input);
 
-		buildCdcContractBo();
+		buildCdcServicesBo();
 		
 		// Received tuple is: key, processId, eventName, data
 
@@ -82,19 +82,19 @@ public class CDCContractBolt extends BasicRichBolt {
 
 		logPreffix = String.format("[Key: %s][ProcessId: %s]: ", key, processId);
 
-		CDCContractChangeRecord cr = null;
+		CDCServicesChangeRecord cr = null;
 		try {
-			cr = (CDCContractChangeRecord) input.getValueByField("eventData");
+			cr = (CDCServicesChangeRecord) input.getValueByField("eventData");
 
 			LOG.debug("{}Action {} starting for changeRecord {}.", logPreffix, eventName, cr);
 
-			if (cr.getContractID() == null /*|| p.getContract().getId().getId() == -1*/) {
-				throw new Exception("Contract Id null.");
+			if (cr.getServiceID() == null /*|| p.getServices().getId().getId() == -1*/) {
+				throw new Exception("Service Id null.");
 			}
 
-			cdcContractBo.processChangeRecord(cr);
+			cdcServicesBo.processChangeRecord(cr);
 
-			CDCContractChangeRecord result = cr;
+			CDCServicesChangeRecord result = cr;
 
 			getCollector().emit(input, new Values(key, processId, result));
 			getCollector().ack(input);
@@ -107,13 +107,13 @@ public class CDCContractBolt extends BasicRichBolt {
 		}
 	}
 
-	protected void sendNextStep(Tuple input, CDCContractChangeRecord cr) {
+	protected void sendNextStep(Tuple input, CDCServicesChangeRecord cr) {
 
 		Integer sequence = cr.getSequence();
 		Integer eventNumber = cr.getEventNumber();
 		Integer timestamp = cr.getTimestamp();
 		String eventType = cr.getEventType().toString();
-		String elementId = cr.getContractID();
+		String elementId = cr.getServiceID();
 		String key = sequence + "-" + eventNumber + "-" + timestamp + "-" + eventType + "-" + elementId;
 
 		Map<String, Object> values = new HashMap<>();

@@ -1,4 +1,4 @@
-package com.orwellg.yggdrasil.contract.cdc.topology.bolts;
+package com.orwellg.yggdrasil.services.cdc.topology.bolts;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -7,7 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.orwellg.yggdrasil.contract.cdc.bo.CDCContractBO;
+import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesBO;
+import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesBOTest;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.tuple.Tuple;
@@ -22,12 +23,11 @@ import org.mockito.junit.MockitoRule;
 
 import com.datastax.driver.core.Session;
 import com.google.gson.Gson;
-import com.orwellg.umbrella.avro.types.cdc.CDCContractChangeRecord;
-import com.orwellg.yggdrasil.contract.cdc.bo.CDCContractBOTest;
+import com.orwellg.umbrella.avro.types.cdc.CDCServicesChangeRecord;
 
-public class CDCContractBoltTest {
+public class CDCServicesBoltTest {
 
-	protected final CDCContractChangeRecord INSERT_CHANGE_RECORD = new Gson().fromJson(CDCContractBOTest.INSERT_CDC_JSON, CDCContractChangeRecord.class);
+	protected final CDCServicesChangeRecord INSERT_CHANGE_RECORD = new Gson().fromJson(CDCServicesBOTest.INSERT_CDC_JSON, CDCServicesChangeRecord.class);
 	
 	@Mock
 	protected Tuple insertTuple;
@@ -35,31 +35,31 @@ public class CDCContractBoltTest {
 	@Mock
 	protected Session ses;
 	@Mock
-	protected CDCContractBO cdcContractBo;
+	protected CDCServicesBO cdcServicesBo;
 	@Mock
 	protected OutputCollector collector;
 
 	@Rule
 	public MockitoRule mockitoRule = MockitoJUnit.rule();
 
-	protected CDCContractBolt cdcContractBolt = new CDCContractBolt();
+	protected CDCServicesBolt cdcServicesBolt = new CDCServicesBolt();
 
-	protected CDCContractBolt cdcContractBoltErrorScenario = new CDCContractBolt();
+	protected CDCServicesBolt cdcServicesBoltErrorScenario = new CDCServicesBolt();
 	@Mock
-	protected CDCContractBO cdcContractBoErrorScenario;
+	protected CDCServicesBO cdcServicesBoErrorScenario;
 	@Mock
 	protected Logger logMock;
 
 	@Before
 	public void setUp() throws Throwable {
-		cdcContractBolt.session = ses;
-		cdcContractBolt.cdcContractBo = cdcContractBo;
-		cdcContractBolt.setCollector(collector);
+		cdcServicesBolt.session = ses;
+		cdcServicesBolt.cdcServicesBo = cdcServicesBo;
+		cdcServicesBolt.setCollector(collector);
 
-		cdcContractBoltErrorScenario.session = ses;
-		cdcContractBoltErrorScenario.cdcContractBo = cdcContractBoErrorScenario;
-		cdcContractBoltErrorScenario.setCollector(collector);
-		cdcContractBoltErrorScenario.LOG = logMock;
+		cdcServicesBoltErrorScenario.session = ses;
+		cdcServicesBoltErrorScenario.cdcServicesBo = cdcServicesBoErrorScenario;
+		cdcServicesBoltErrorScenario.setCollector(collector);
+		cdcServicesBoltErrorScenario.LOG = logMock;
 
 		String key = "key1234";
 		when(insertTuple.getValueByField("key")).thenReturn(key);
@@ -77,12 +77,12 @@ public class CDCContractBoltTest {
 	public void testExecute() throws Exception {
 		// Given insert CDC event tuple
 
-		// When execute() with CDCContractChangeRecord in eventData of Tuple
-		cdcContractBolt.execute(insertTuple);
+		// When execute() with CDCServicesChangeRecord in eventData of Tuple
+		cdcServicesBolt.execute(insertTuple);
 
-		// Then Contract insert requested to CDCContractBO
-		verify(cdcContractBolt.cdcContractBo).processChangeRecord(INSERT_CHANGE_RECORD);
-		// And emit with CDCContractChangeRecord as result in Tuple
+		// Then Services insert requested to CDCServicesBO
+		verify(cdcServicesBolt.cdcServicesBo).processChangeRecord(INSERT_CHANGE_RECORD);
+		// And emit with CDCServicesChangeRecord as result in Tuple
 		verify(collector).emit(insertTuple, new Values(insertTuple.getValueByField("key"), insertTuple.getValueByField("processId"), INSERT_CHANGE_RECORD));
 		verify(collector).ack(insertTuple);
 	}
@@ -90,25 +90,25 @@ public class CDCContractBoltTest {
 	@Test
 	public void testExecuteErrorScenario() throws Exception {
 		//	Scenario 5 - Error executing insert/update_after/delete
-		//	- When insert/update_after/delete CDC event received on CDC topic "com.orwellg.yggdrasil.contract.CDC.request.1" and exception occurs
+		//	- When insert/update_after/delete CDC event received on CDC topic "com.orwellg.yggdrasil.services.CDC.request.1" and exception occurs
 		//	- Then logged at error level full stacktrace including the original ChangeRecord event as it came from maxscale. Nothing published to kafka topic.
 		//	- And exception must be thrown so that the worker dies and then storm spawns a new worker and retries indefinitely. Storm collector emit() and ack() must not be called.
 		
 		// Given execution that will raise an exception within the bolt
 		RuntimeException simulatedEx = new RuntimeException("simulated error");
-		when(cdcContractBoErrorScenario.processChangeRecord(INSERT_CHANGE_RECORD)).thenThrow(simulatedEx);
+		when(cdcServicesBoErrorScenario.processChangeRecord(INSERT_CHANGE_RECORD)).thenThrow(simulatedEx);
 		Throwable cause = null;
 		
 		// When executed
 		try {
-			cdcContractBoltErrorScenario.execute(insertTuple);
+			cdcServicesBoltErrorScenario.execute(insertTuple);
 			fail("Exception should have been raised");
 		} catch (Exception e) {
 			cause = e.getCause();
 		}
 		
 		// Then logged at error level full stacktrace including the original ChangeRecord event as it came from maxscale.
-		verify(logMock).error(String.format("%sError in Action %s for %s. Message: %s", cdcContractBoltErrorScenario.logPreffix,
+		verify(logMock).error(String.format("%sError in Action %s for %s. Message: %s", cdcServicesBoltErrorScenario.logPreffix,
 				INSERT_CHANGE_RECORD.getEventType().toString(), INSERT_CHANGE_RECORD, simulatedEx.getMessage()), simulatedEx);
 		// And exception must be thrown so that the worker dies and then storm spawns a new worker and retries indefinitely.
 		assertEquals(simulatedEx, cause);
