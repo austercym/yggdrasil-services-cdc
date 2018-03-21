@@ -80,7 +80,7 @@ public class CDCServicesTopologyIT {
 		Session session = ScyllaManager.getInstance(scyllaNodes).getCluster().connect();
 //		Session session = ScyllaManager.getInstance(scyllaNodes).getSession(scyllaKeyspace);
 		ScyllaDbHelper scyllaDbHelper = new ScyllaDbHelper(session);
-		scyllaDbHelper.createDbSchema("/DataModel/ScyllaDB/scylla_obs_datamodel.cql", ";");
+		scyllaDbHelper.createDbSchema("/DataModel/ScyllaDB/scylla_obs_datamodel.cql", ";", ScyllaParams.DEFAULT_SCYLA_KEYSPACE_CUSTOMER_PRODUCT_DB, scyllaKeyspace);
 		
 		LOG.info("LocalCluster setting up...");
 		cluster = new LocalCluster();
