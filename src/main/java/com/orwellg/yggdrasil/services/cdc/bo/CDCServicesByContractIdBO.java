@@ -33,6 +33,7 @@ public class CDCServicesByContractIdBO {
 	 * @return inserted/updated/deleted scylla entity.
 	 */
 	public ServicesByContractId processChangeRecord(CDCServicesChangeRecord changeRecord) {
+		
 		// Map ChangeRecord to ServicesByContractId entity
 		ServicesByContractId servicesByContractId = objectMapper.map(changeRecord, ServicesByContractId.class);
 	

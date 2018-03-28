@@ -34,6 +34,7 @@ public class CDCServicesBO {
 	 * @return inserted/updated/deleted scylla entity.
 	 */
 	public Services processChangeRecord(CDCServicesChangeRecord changeRecord) {
+		
 		// Map ChangeRecord to Services entity
 		Services services = objectMapper.map(changeRecord, Services.class);
 	

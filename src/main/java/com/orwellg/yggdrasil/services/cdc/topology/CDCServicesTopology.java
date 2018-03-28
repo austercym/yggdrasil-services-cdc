@@ -2,7 +2,6 @@ package com.orwellg.yggdrasil.services.cdc.topology;
 
 import java.util.Arrays;
 
-import com.orwellg.yggdrasil.services.cdc.topology.bolts.CDCServicesByContractIdBolt;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.storm.Config;
@@ -20,7 +19,9 @@ import com.orwellg.umbrella.commons.storm.topology.generic.grouping.ShuffleGroup
 import com.orwellg.umbrella.commons.storm.topology.generic.spout.GSpout;
 import com.orwellg.umbrella.commons.storm.wrapper.kafka.KafkaSpoutWrapper;
 import com.orwellg.umbrella.commons.utils.config.ZookeeperUtils;
+import com.orwellg.yggdrasil.services.cdc.topology.bolts.CDCOPAccountBolt;
 import com.orwellg.yggdrasil.services.cdc.topology.bolts.CDCServicesBolt;
+import com.orwellg.yggdrasil.services.cdc.topology.bolts.CDCServicesByContractIdBolt;
 import com.orwellg.yggdrasil.services.cdc.topology.bolts.KafkaChangeRecordProcessBolt;
 
 /**
@@ -47,6 +48,7 @@ public class CDCServicesTopology {
 	private static final String KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID = "cdc-services-kafka-event-success-process";
 	private static final String CDC_SERVICES_COMPONENT_ID = "cdc-services-action";
 	private static final String CDC_SERVICES_BY_CONTRACT_ID_COMPONENT_ID = "cdc-services-by-contract-id-action";
+	private static final String CDC_SERVICES_BY_OBACCOUNT_ID_COMPONENT_ID = "cdc-services-by-obaccount-id-action";
 
 	private final static Logger LOG = LogManager.getLogger(CDCServicesTopology.class);
 
@@ -102,7 +104,7 @@ public class CDCServicesTopology {
 
 		// Read configuration params from topology.properties and zookeeper
 		TopologyConfig config = TopologyConfigFactory.getTopologyConfig();
-		
+
 		// Create the spout that read the events from Kafka
 		Integer kafkaSpoutHints = config.getKafkaSpoutHints();
 		LOG.info("kafkaSpoutHints = {}", kafkaSpoutHints);
@@ -113,7 +115,7 @@ public class CDCServicesTopology {
 		GBolt<?> kafkaEventProcess = new GRichBolt(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID,
 				new KafkaChangeRecordProcessBolt(), config.getEventProcessHints());
 		kafkaEventProcess
-				.addGrouping(new ShuffleGrouping(KAFKA_EVENT_READER_COMPONENT_ID, KafkaSpout.EVENT_SUCCESS_STREAM));
+		.addGrouping(new ShuffleGrouping(KAFKA_EVENT_READER_COMPONENT_ID, KafkaSpout.EVENT_SUCCESS_STREAM));
 
 		////////
 		// Action bolts:
@@ -128,10 +130,15 @@ public class CDCServicesTopology {
 		// Link to the former bolt
 		servicesByContractIdActionBolt.addGrouping(new ShuffleGrouping(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID));
 
+		// CDC bolt
+		GBolt<?> servicesByOBAccountIdActionBolt = new GRichBolt(CDC_SERVICES_BY_OBACCOUNT_ID_COMPONENT_ID, new CDCOPAccountBolt(), config.getActionBoltHints());
+		// Link to the former bolt
+		servicesByOBAccountIdActionBolt.addGrouping(new ShuffleGrouping(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID));
+
 		// Build the topology
 		StormTopology topology = TopologyFactory.generateTopology(kafkaEventReader,
 				Arrays.asList(
-						new GBolt[] { kafkaEventProcess, actionBolt, servicesByContractIdActionBolt }));
+						new GBolt[] { kafkaEventProcess, actionBolt, servicesByContractIdActionBolt, servicesByOBAccountIdActionBolt }));
 
 		LOG.info("Services Topology created, submitting it to storm...");
 

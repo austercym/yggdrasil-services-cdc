@@ -7,10 +7,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
-import com.orwellg.umbrella.commons.repositories.scylla.ServicesByContractIdRepository;
-import com.orwellg.umbrella.commons.repositories.scylla.impl.ServicesByContractIdRepositoryImpl;
-import com.orwellg.umbrella.commons.types.scylla.entities.ServicesByContractId;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -23,16 +19,17 @@ import com.google.gson.Gson;
 import com.orwellg.umbrella.avro.types.cdc.CDCServicesChangeRecord;
 import com.orwellg.umbrella.avro.types.cdc.EVENT_TYPES;
 import com.orwellg.umbrella.commons.config.params.ScyllaParams;
+import com.orwellg.umbrella.commons.repositories.scylla.ServicesByContractIdRepository;
 import com.orwellg.umbrella.commons.repositories.scylla.ServicesRepository;
+import com.orwellg.umbrella.commons.repositories.scylla.impl.ServicesByContractIdRepositoryImpl;
 import com.orwellg.umbrella.commons.repositories.scylla.impl.ServicesRepositoryImpl;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.types.scylla.entities.Services;
+import com.orwellg.umbrella.commons.types.scylla.entities.ServicesByContractId;
 import com.orwellg.umbrella.commons.utils.scylla.ScyllaManager;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGenerator;
 import com.orwellg.umbrella.commons.utils.uniqueid.UniqueIDGeneratorLocal;
-
-import javax.print.DocFlavor;
 
 public class CDCServicesRequestSender {
 
@@ -151,9 +148,12 @@ public class CDCServicesRequestSender {
 		element.setEventNumber(eventNumber);
 		element.setTimestamp((int) System.currentTimeMillis());
 		element.setEventType(EVENT_TYPES.insert);
-		
+
 		element.setServiceID(id);
 		element.setContractID(contractId);
+		element.setExternalIDs("{\"OBClientID\": \"Test - OBClient\"}");
+		element.setStatus("Test");
+		element.setUpdateVector(1L);
 		return element;
 	}
 

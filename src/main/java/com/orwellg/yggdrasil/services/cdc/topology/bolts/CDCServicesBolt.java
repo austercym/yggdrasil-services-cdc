@@ -86,7 +86,7 @@ public class CDCServicesBolt extends BasicRichBolt {
 		try {
 			cr = (CDCServicesChangeRecord) input.getValueByField("eventData");
 
-			LOG.debug("{}Action {} starting for changeRecord {}.", logPreffix, eventName, cr);
+			LOG.debug("{}Action {} starting for changeRecord Services {}.", logPreffix, eventName, cr);
 
 			if (cr.getServiceID() == null /*|| p.getServices().getId().getId() == -1*/) {
 				throw new Exception("Service Id null.");

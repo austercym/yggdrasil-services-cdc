@@ -17,11 +17,13 @@ import com.datastax.driver.core.Session;
 import com.google.gson.Gson;
 import com.orwellg.umbrella.avro.types.cdc.CDCServicesChangeRecord;
 import com.orwellg.umbrella.commons.config.params.ScyllaParams;
-import com.orwellg.umbrella.commons.repositories.scylla.impl.ServicesByContractIdRepositoryImpl;
+import com.orwellg.umbrella.commons.repositories.scylla.OBClientIdAccountRepository;
+import com.orwellg.umbrella.commons.repositories.scylla.impl.OBClientIdAccountRepositoryImpl;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.storm.topology.component.bolt.BasicRichBolt;
 import com.orwellg.umbrella.commons.utils.scylla.ScyllaManager;
-import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesByContractIdBO;
+import com.orwellg.yggdrasil.services.cdc.bo.CDCOPAccountBO;
+import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesBO;
 
 /**
  * Bolt to process Services CDC actions received by topic.
@@ -29,15 +31,15 @@ import com.orwellg.yggdrasil.services.cdc.bo.CDCServicesByContractIdBO;
  * @author c.friaszapater
  *
  */
-public class CDCServicesByContractIdBolt extends BasicRichBolt {
+public class CDCOPAccountBolt extends BasicRichBolt {
 
 	private static final long serialVersionUID = 1L;
 
-	protected Logger LOG = LogManager.getLogger(CDCServicesByContractIdBolt.class);
+	protected Logger LOG = LogManager.getLogger(CDCOPAccountBolt.class);
 
 	protected Gson gson;
 
-	protected CDCServicesByContractIdBO cdcServicesByContractIdBo;
+	protected CDCOPAccountBO cdcOPAccountBO;
 	protected Session session;
 
 	protected String logPreffix;
@@ -50,15 +52,15 @@ public class CDCServicesByContractIdBolt extends BasicRichBolt {
 		super.prepare(stormConf, context, collector);
 		gson = new Gson();
 		addFielsDefinition(Arrays.asList("key", "message"));
-		buildCdcServicesByContractIdBo();
+		buildCdcServicesBo();
 	}
 
-	private void buildCdcServicesByContractIdBo() {
+	private void buildCdcServicesBo() {
 		if (session == null || session.isClosed()) {
 			ScyllaParams scyllaParams = TopologyConfigFactory.getTopologyConfig().getScyllaConfig().getScyllaParams();
 			session = ScyllaManager.getInstance(scyllaParams.getNodeList()).getSession(scyllaParams.getKeyspace());
-			ServicesByContractIdRepositoryImpl servicesByContractIdDao = new ServicesByContractIdRepositoryImpl(session);
-			cdcServicesByContractIdBo = new CDCServicesByContractIdBO(gson, servicesByContractIdDao);
+			OBClientIdAccountRepository servicesDao = new OBClientIdAccountRepositoryImpl(session);
+			cdcOPAccountBO = new CDCOPAccountBO(gson, servicesDao);
 		}
 	}
 
@@ -72,7 +74,7 @@ public class CDCServicesByContractIdBolt extends BasicRichBolt {
 
 		LOG.debug("CDC ChangeRecord received: {}. Starting the execution process.", input);
 
-		buildCdcServicesByContractIdBo();
+		buildCdcServicesBo();
 		
 		// Received tuple is: key, processId, eventName, data
 
@@ -86,17 +88,13 @@ public class CDCServicesByContractIdBolt extends BasicRichBolt {
 		try {
 			cr = (CDCServicesChangeRecord) input.getValueByField("eventData");
 
-			LOG.debug("{}Action {} starting for changeRecord Services By Contract {}.", logPreffix, eventName, cr);
+			LOG.debug("{}Action {} starting for changeRecord OBAccountID {}.", logPreffix, eventName, cr);
 
 			if (cr.getServiceID() == null /*|| p.getServices().getId().getId() == -1*/) {
 				throw new Exception("Service Id null.");
 			}
 
-			if (cr.getContractID() == null /*|| p.getServices().getId().getId() == -1*/) {
-				throw new Exception("Contract Id null.");
-			}
-
-			cdcServicesByContractIdBo.processChangeRecord(cr);
+			cdcOPAccountBO.processChangeRecord(cr);
 
 			CDCServicesChangeRecord result = cr;
 
@@ -117,7 +115,7 @@ public class CDCServicesByContractIdBolt extends BasicRichBolt {
 		Integer eventNumber = cr.getEventNumber();
 		Integer timestamp = cr.getTimestamp();
 		String eventType = cr.getEventType().toString();
-		String elementId = cr.getContractID();
+		String elementId = cr.getServiceID();
 		String key = sequence + "-" + eventNumber + "-" + timestamp + "-" + eventType + "-" + elementId;
 
 		Map<String, Object> values = new HashMap<>();
