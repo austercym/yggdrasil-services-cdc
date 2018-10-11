@@ -39,9 +39,9 @@ public class CDCServicesByContractIdBoltTest {
 	@Rule
 	public MockitoRule mockitoRule = MockitoJUnit.rule();
 
-	protected CDCServicesByContractIdBolt cdcServicesBolt = new CDCServicesByContractIdBolt();
+	protected CDCServicesByContractIdBolt cdcServicesBolt = new CDCServicesByContractIdBolt("localhost:2181");
 
-	protected CDCServicesByContractIdBolt cdcServicesBoltErrorScenario = new CDCServicesByContractIdBolt();
+	protected CDCServicesByContractIdBolt cdcServicesBoltErrorScenario = new CDCServicesByContractIdBolt("localhost:2181");
 	@Mock
 	protected CDCServicesByContractIdBO cdcServicesBoErrorScenario;
 	@Mock

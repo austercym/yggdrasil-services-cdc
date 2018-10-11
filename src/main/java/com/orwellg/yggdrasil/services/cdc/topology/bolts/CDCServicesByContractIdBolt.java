@@ -41,6 +41,13 @@ public class CDCServicesByContractIdBolt extends BasicRichBolt {
 	protected Session session;
 
 	protected String logPreffix;
+	
+	protected String zookeeperHost;
+
+	public CDCServicesByContractIdBolt(String zookeeperHost) {
+		super();
+		this.zookeeperHost = zookeeperHost;
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -55,8 +62,8 @@ public class CDCServicesByContractIdBolt extends BasicRichBolt {
 
 	private void buildCdcServicesByContractIdBo() {
 		if (session == null || session.isClosed()) {
-			ScyllaParams scyllaParams = TopologyConfigFactory.getTopologyConfig().getScyllaConfig().getScyllaParams();
-			session = ScyllaManager.getInstance(scyllaParams.getNodeList()).getSession(scyllaParams.getKeyspace());
+			ScyllaParams scyllaParams = TopologyConfigFactory.getTopologyConfig(null, zookeeperHost).getScyllaConfig().getScyllaParams();
+			session = ScyllaManager.getInstance(scyllaParams).getSession();
 			ServicesByContractIdRepositoryImpl servicesByContractIdDao = new ServicesByContractIdRepositoryImpl(session);
 			cdcServicesByContractIdBo = new CDCServicesByContractIdBO(gson, servicesByContractIdDao);
 		}

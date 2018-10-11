@@ -58,7 +58,7 @@ public class CDCServicesTopologyIT {
 		// #uniqueid must be set anyway in zookeeper:
 		// create /com/orwellg/unique-id-generator/cluster-suffix IPAGO
 		String uniqueIdClusterSuffix = "IPAGO";
-		zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
+		//zk.setZkProp(UniqueIDGenerator.CLUSTER_SUFFIX_ZNODE, uniqueIdClusterSuffix);
 		
 		// #scylla:
 		// create /com/orwellg/yggdrasil/scylla/yggdrassil.scylla.node.list scylla-node1:9042,scylla-node2:9042,scylla-node3:9042

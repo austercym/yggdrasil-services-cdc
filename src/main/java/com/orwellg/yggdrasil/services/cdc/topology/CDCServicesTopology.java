@@ -12,6 +12,7 @@ import org.apache.storm.generated.StormTopology;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfig;
 import com.orwellg.umbrella.commons.storm.config.topology.TopologyConfigFactory;
 import com.orwellg.umbrella.commons.storm.topology.TopologyFactory;
+import com.orwellg.umbrella.commons.storm.topology.component.base.AbstractTopologyMain;
 import com.orwellg.umbrella.commons.storm.topology.component.spout.KafkaSpout;
 import com.orwellg.umbrella.commons.storm.topology.generic.bolt.GBolt;
 import com.orwellg.umbrella.commons.storm.topology.generic.bolt.GRichBolt;
@@ -40,7 +41,7 @@ import com.orwellg.yggdrasil.services.cdc.topology.bolts.KafkaChangeRecordProces
  * @author c.friaszapater
  *
  */
-public class CDCServicesTopology {
+public class CDCServicesTopology extends AbstractTopologyMain {
 
 	private static final String TOPOLOGY_NAME = "yggdrasil-services-cdc";
 
@@ -61,6 +62,7 @@ public class CDCServicesTopology {
 	 */
 	public static void main(String[] args) throws Exception {
 		boolean local = false;
+		String zookeeperhost = null;
 		if (args.length >= 1 && args[0].equals("local")) {
 			LOG.info("*********** Local parameter received, will work with LocalCluster ************");
 			local = true;
@@ -75,18 +77,31 @@ public class CDCServicesTopology {
 			Thread.sleep(6000000);
 			cluster.shutdown();
 			ZookeeperUtils.close();
-		} else {
-			loadTopologyInStorm();
+		}  else {
+			if(args.length >= 1) {
+				zookeeperhost = args[0];
+				LOG.info("*********** Set Zookeeper host by parameter {} ************", zookeeperhost);
+				loadTopologyInStorm(zookeeperhost);
+			}
+			else {
+				LOG.info("*********** Set topology with default properties ************");
+				loadTopologyInStorm();
+			}
 		}
 
 	}
 
-	public static void loadTopologyInStorm() throws Exception {
-		loadTopologyInStorm(null);
+	public static void loadTopologyInStorm(LocalCluster cluster) throws Exception {
+		loadTopologyInStorm(cluster, null, null);
 	}
-
-	public static void loadTopologyInStorm(LocalCluster localCluster) throws Exception {
-		loadTopologyInStorm(localCluster, null);
+	
+	public static void loadTopologyInStorm(String zookeeperhost) throws Exception {
+		loadTopologyInStorm(null, zookeeperhost, null);
+		
+	}
+	
+	public static void loadTopologyInStorm() throws Exception {
+		loadTopologyInStorm(null, null, null);
 	}
 
 	/**
@@ -99,11 +114,11 @@ public class CDCServicesTopology {
 	 * @param localCluster
 	 *            null to submit to remote cluster.
 	 */
-	public static void loadTopologyInStorm(LocalCluster localCluster, Config conf) throws Exception {
+	public static void loadTopologyInStorm(LocalCluster localCluster,String zookeeperHost, String propertyFile) throws Exception {
 		LOG.info("Creating {} topology...", TOPOLOGY_NAME);
 
 		// Read configuration params from topology.properties and zookeeper
-		TopologyConfig config = TopologyConfigFactory.getTopologyConfig();
+		TopologyConfig config = TopologyConfigFactory.getTopologyConfig(propertyFile, zookeeperHost);
 
 		// Create the spout that read the events from Kafka
 		Integer kafkaSpoutHints = config.getKafkaSpoutHints();
@@ -115,7 +130,7 @@ public class CDCServicesTopology {
 		GBolt<?> kafkaEventProcess = new GRichBolt(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID,
 				new KafkaChangeRecordProcessBolt(), config.getEventProcessHints());
 		kafkaEventProcess
-		.addGrouping(new ShuffleGrouping(KAFKA_EVENT_READER_COMPONENT_ID, KafkaSpout.EVENT_SUCCESS_STREAM));
+				.addGrouping(new ShuffleGrouping(KAFKA_EVENT_READER_COMPONENT_ID, KafkaSpout.EVENT_SUCCESS_STREAM));
 
 		////////
 		// Action bolts:
@@ -126,7 +141,7 @@ public class CDCServicesTopology {
 		actionBolt.addGrouping(new ShuffleGrouping(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID));
 
 		// CDC bolt
-		GBolt<?> servicesByContractIdActionBolt = new GRichBolt(CDC_SERVICES_BY_CONTRACT_ID_COMPONENT_ID, new CDCServicesByContractIdBolt(), config.getActionBoltHints());
+		GBolt<?> servicesByContractIdActionBolt = new GRichBolt(CDC_SERVICES_BY_CONTRACT_ID_COMPONENT_ID, new CDCServicesByContractIdBolt(zookeeperHost), config.getActionBoltHints());
 		// Link to the former bolt
 		servicesByContractIdActionBolt.addGrouping(new ShuffleGrouping(KAFKA_EVENT_SUCCESS_PROCESS_COMPONENT_ID));
 
@@ -143,20 +158,25 @@ public class CDCServicesTopology {
 		LOG.info("Services Topology created, submitting it to storm...");
 
 		// Create the basic config and upload the topology
-		if (conf == null) {
-			conf = new Config();
+		
+			Config conf = new Config();
 			conf.setDebug(false);
 			conf.setMaxTaskParallelism(config.getTopologyMaxTaskParallelism());
 			conf.setNumWorkers(config.getTopologyNumWorkers());
-		}
+		
 
 		if (localCluster != null) {
 			// LocalCluster cluster = new LocalCluster();
-			localCluster.submitTopology(TOPOLOGY_NAME, conf, topology);
+			localCluster.submitTopology(TOPOLOGY_NAME, config(zookeeperHost), topology);
 			LOG.info("{} Topology submitted to storm (LocalCluster).", TOPOLOGY_NAME);
 		} else {
-			StormSubmitter.submitTopology(TOPOLOGY_NAME, conf, topology);
+			StormSubmitter.submitTopology(TOPOLOGY_NAME, config(zookeeperHost), topology);
 			LOG.info("{} Topology submitted to storm (StormSubmitter).", TOPOLOGY_NAME);
 		}
+	}
+	
+	private static Config config(String zookeeper) {
+	     TopologyConfig config = TopologyConfigFactory.getTopologyConfig(null, zookeeper);
+	     return config(config, config.getScyllaConfig().getScyllaParams().getKeyspace());
 	}
 }
