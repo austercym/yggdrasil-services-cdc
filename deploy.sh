@@ -1,5 +1,65 @@
 #!/usr/bin/env bash
-FILE=yggdrasil-services-cdc-0.0.1-SNAPSHOT.jar
+
+usage() {
+	echo "Usage: $0 -v <version> [-e <env>] [-d <dest-server>] [-u <server-user>] [-f]" 1>&2;
+	echo "  - env: SID / UAT; currently used ONLY for some config, so make sure you provide correct arguments to -d and -u options";
+	exit 1;
+}
+
+# Default env
+env=SID
+
+# Default dest-server for SID
+server=sid-hdf-g4-1
+
+# Default server-user for SID
+serverUser=centos
+
+while getopts "v:e:d:u:f" o; do
+    case "${o}" in
+        v)
+            version=${OPTARG}
+            ;;
+        e)
+            env=${OPTARG}
+            ;;
+        d)
+            server=${OPTARG}
+            ;;
+        u)
+            serverUser=${OPTARG}
+            ;;
+        f)
+            force=true
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -z "${version}" ] || [ -z "${server}" ]; then
+    usage
+fi
+
+if [ -z "${force}" ]; then
+	read -r -p "Will deploy to $server, are you sure? [y/N] " response
+	case "$response" in
+	    [yY][eE][sS]|[yY])
+	        echo "deploying..."
+	        ;;
+	    *)
+	        exit 1
+	        ;;
+	esac
+fi
+
+# dir where this script is located
+dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+
+FILE=yggdrasil-services-cdc-$version.jar
+
 TOPOLOGY=yggdrasil-services-cdc
 MAIN=com.orwellg.yggdrasil.services.cdc.topology.CDCServicesTopology
 PROFILE=deploy
@@ -7,8 +67,27 @@ SERVER=sid-hdf-g4-1
 SERVERUSER=centos
 SERVERDIR=/tmp/
 DEPLOYUSER=svc_core
-NIMBUS=sid-hdf-g1-1.node.sid.consul
-ZOOKEEPER=sid-hdf-g1-0.node.sid.consul:2181,sid-hdf-g1-1.node.sid.consul:2181,sid-hdf-g1-2.node.sid.consul:2181
+
+if [ $env = "SID" ]; then
+	NIMBUS=sid-hdf-g1-1.node.sid.consul
+	ZOOKEEPER=sid-hdf-g1-0.node.sid.consul:2181,sid-hdf-g1-1.node.sid.consul:2181,sid-hdf-g1-2.node.sid.consul:2181
+elif [ $env = "UAT" ]; then
+	NIMBUS=hdf-group2-1.node.consul
+	ZOOKEEPER=hdf-group2-0.node.consul:2181,hdf-group2-1.node.consul:2181,hdf-group4-2.node.consul:2181
+else
+	usage
+fi
+
+
 mvn clean package -P $PROFILE
-scp target/$FILE $SERVERUSER@$SERVER:$SERVERDIR$FILE
-ssh $SERVERUSER@$SERVER "sudo -H -u $DEPLOYUSER bash -c  'cd /home/$DEPLOYUSER; pwd; kinit -kt /etc/security/keytabs/$DEPLOYUSER.keytab $DEPLOYUSER@ORWELLG.SID; storm kill $TOPOLOGY -c nimbus.host=$NIMBUS; sleep 20s; storm jar /tmp/$FILE $MAIN $ZOOKEEPER -c topology.worker.childopts='-Djava.security.auth.login.config=/hadoop/storm/jaas/${DEPLOYUSER}_jaas.conf' nimbus.host=$NIMBUS;exit'"
+# TODO before we can deploy from artifactory, we need to set "deploy" profile as default in super-pom-read, so that jar stored in artifactory is compiled with that profile:
+#curl -o $dir/target/$JAR "http://54.36.52.140:8081/artifactory/libs-release-local/com/orwellg/yggdrasil/yggdrasil-partypersonaldetails-cdc/$version/$JAR"
+
+
+if [ ! -f $dir/target/$JAR ]; then
+  echo "ERROR: $dir/target/$JAR not found"
+  exit 1
+fi
+
+scp $dir/target/$JAR $serverUser@$server:$SERVERDIR$JAR
+ssh $serverUser@$server "chmod o+r /tmp/$JAR; sudo -H -u $DEPLOYUSER bash -c 'cd /home/$DEPLOYUSER; pwd; kinit -kt /etc/security/keytabs/$DEPLOYUSER.keytab $DEPLOYUSER@ORWELLG.$env; storm kill $TOPOLOGY -c nimbus.host=$NIMBUS; sleep 20s; storm jar /tmp/$JAR $MAIN $ZOOKEEPER -c nimbus.host=$NIMBUS;exit'"
