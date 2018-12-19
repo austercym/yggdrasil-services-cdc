@@ -58,7 +58,7 @@ fi
 # dir where this script is located
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-FILE=yggdrasil-services-cdc-$version.jar
+JAR=yggdrasil-services-cdc-$version.jar
 
 TOPOLOGY=yggdrasil-services-cdc
 MAIN=com.orwellg.yggdrasil.services.cdc.topology.CDCServicesTopology
@@ -74,15 +74,16 @@ if [ $env = "SID" ]; then
 elif [ $env = "UAT" ]; then
 	NIMBUS=hdf-group2-1.node.consul
 	ZOOKEEPER=hdf-group2-0.node.consul:2181,hdf-group2-1.node.consul:2181,hdf-group4-2.node.consul:2181
+elif [ $env = "PROD" ]; then
+	NIMBUS=hdf-g1-1.node.consul
+	ZOOKEEPER=hdf-g1-0.node.consul:2181,hdf-g1-1.node.consul:2181,hdf-g1-2.node.consul:2181
+	env=IO
 else
 	usage
 fi
 
 
 mvn clean package -P $PROFILE
-# TODO before we can deploy from artifactory, we need to set "deploy" profile as default in super-pom-read, so that jar stored in artifactory is compiled with that profile:
-#curl -o $dir/target/$JAR "http://54.36.52.140:8081/artifactory/libs-release-local/com/orwellg/yggdrasil/yggdrasil-partypersonaldetails-cdc/$version/$JAR"
-
 
 if [ ! -f $dir/target/$JAR ]; then
   echo "ERROR: $dir/target/$JAR not found"
